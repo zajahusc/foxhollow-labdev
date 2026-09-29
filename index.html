@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f1f3ec">
+  <meta name="description" content="Foxhollow Labs is a software studio creating apps for Apple platforms.">
+  <title>Foxhollow Labs — Software for Apple platforms</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f1f3ec;
+      --ink: #171b17;
+      --muted: #626960;
+      --line: #d4d9d0;
+      --acid: #c9fa5f;
+      --blue: #6578ed;
+      --mono: "DM Mono", monospace;
+      --display: "Space Grotesk", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--display);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; }
+
+    .wrap {
+      width: min(1320px, calc(100% - 112px));
+      margin-inline: auto;
+    }
+
+    .topbar {
+      height: 92px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .identity {
+      display: inline-flex;
+      align-items: center;
+      gap: 13px;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .identity-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      background: var(--ink);
+      color: var(--acid);
+      font-family: var(--mono);
+      font-size: 17px;
+    }
+
+    .nav-link, .eyebrow, .readout, .section-index, .footer-note {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 400;
+      text-transform: uppercase;
+    }
+
+    .nav-link {
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      padding-block: 6px;
+      transition: border-color 180ms ease;
+    }
+
+    .nav-link:hover { border-color: var(--ink); }
+
+    .hero {
+      min-height: 620px;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      align-items: center;
+      gap: 42px;
+      padding-block: 68px 84px;
+    }
+
+    .hero-copy { position: relative; z-index: 1; }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--blue);
+      border-radius: 50%;
+      box-shadow: 0 0 0 4px rgb(101 120 237 / 12%);
+    }
+
+    h1 {
+      max-width: 690px;
+      margin: 29px 0 22px;
+      font-size: 88px;
+      line-height: 0.98;
+      font-weight: 500;
+    }
+
+    .intro {
+      max-width: 435px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1.55;
+    }
+
+    .hero-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 13px;
+      margin-top: 36px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .hero-link span:last-child {
+      display: grid;
+      width: 32px;
+      height: 32px;
+      place-items: center;
+      background: var(--acid);
+      transition: transform 180ms ease;
+    }
+
+    .hero-link:hover span:last-child { transform: translate(3px, 3px); }
+
+    .visual {
+      position: relative;
+      width: 100%;
+      max-width: 560px;
+      aspect-ratio: 1;
+      justify-self: end;
+      overflow: hidden;
+      background-color: #e7eae1;
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 34px 34px;
+      animation: appear 700ms both;
+    }
+
+    .visual::before, .visual::after {
+      content: "";
+      position: absolute;
+      background: var(--ink);
+      opacity: 0.2;
+    }
+
+    .visual::before {
+      width: 1px;
+      height: 100%;
+      left: 50%;
+    }
+
+    .visual::after {
+      height: 1px;
+      width: 100%;
+      top: 50%;
+    }
+
+    .mark-wrap {
+      position: absolute;
+      inset: 15%;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgb(23 27 23 / 24%);
+      animation: appear 700ms 120ms both;
+    }
+
+    .mark-wrap::before, .mark-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 13%;
+      border: 1px solid rgb(23 27 23 / 28%);
+      transform: rotate(45deg);
+    }
+
+    .mark-wrap::after {
+      inset: 25%;
+      background: var(--acid);
+      border: 0;
+      transform: rotate(45deg);
+    }
+
+    .hero-mark {
+      position: relative;
+      z-index: 1;
+      margin-top: -18px;
+      font-size: 234px;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--ink);
+    }
+
+    .readout {
+      position: absolute;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      background: var(--paper);
+      padding: 7px 10px;
+    }
+
+    .readout-top { top: 14px; left: 15px; }
+    .readout-bottom { right: 15px; bottom: 14px; }
+
+    .readout-swatch {
+      width: 8px;
+      height: 8px;
+      background: var(--blue);
+    }
+
+    .studio {
+      color: var(--paper);
+      background: var(--ink);
+    }
+
+    .studio-inner {
+      min-height: 230px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 56px;
+      padding-block: 48px;
+    }
+
+    .section-index {
+      align-self: start;
+      color: var(--acid);
+    }
+
+    .studio-copy {
+      max-width: 530px;
+      margin: 0;
+      font-size: 25px;
+      line-height: 1.48;
+    }
+
+    .studio-copy strong { font-weight: 500; color: var(--acid); }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 72px;
+      gap: 20px;
+    }
+
+    .footer-note { color: var(--muted); }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 900px) {
+      .wrap { width: calc(100% - 64px); }
+      .hero { min-height: 540px; gap: 20px; }
+      h1 { font-size: 68px; }
+      .hero-mark { font-size: 190px; }
+      .studio-inner { gap: 32px; }
+    }
+
+    @media (max-width: 640px) {
+      .wrap { width: calc(100% - 40px); }
+      .topbar { height: 72px; }
+      .identity { font-size: 14px; }
+      .identity-mark { width: 30px; height: 30px; }
+      .nav-link { font-size: 10px; }
+      .hero {
+        min-height: auto;
+        grid-template-columns: 1fr;
+        gap: 40px;
+        padding-block: 62px 56px;
+      }
+      h1 { max-width: 390px; margin-top: 25px; font-size: 58px; }
+      .intro { max-width: 370px; font-size: 18px; }
+      .hero-link { margin-top: 27px; }
+      .visual { width: min(100%, 430px); justify-self: center; }
+      .hero-mark { font-size: 170px; }
+      .studio-inner {
+        min-height: 0;
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding-block: 38px 44px;
+      }
+      .studio-copy { font-size: 22px; }
+      .footer { min-height: 64px; }
+      .footer-note { font-size: 9px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar wrap">
+    <a class="identity" href="#top" aria-label="Foxhollow Labs home">
+      <span class="identity-mark" aria-hidden="true">F.</span>
+      <span>Foxhollow Labs</span>
+    </a>
+    <a class="nav-link" href="#studio">The studio <span aria-hidden="true">↘</span></a>
+  </header>
+
+  <main id="top">
+    <section class="hero wrap" aria-labelledby="page-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="status-dot" aria-hidden="true"></span>Software studio / Apple platforms</div>
+        <h1 id="page-title">Foxhollow<br>Labs.</h1>
+        <p class="intro">Useful, thoughtfully made apps for the Apple ecosystem. We’re just getting started.</p>
+        <a class="hero-link" href="#studio"><span>A little about us</span><span aria-hidden="true">↘</span></a>
+      </div>
+
+      <div class="visual" role="img" aria-label="Foxhollow Labs F monogram on a geometric technical grid">
+        <span class="readout readout-top"><span class="readout-swatch" aria-hidden="true"></span>FOXHOLLOW / 01</span>
+        <div class="mark-wrap" aria-hidden="true"><span class="hero-mark">F</span></div>
+        <span class="readout readout-bottom">APP STORE / IN DEVELOPMENT</span>
+      </div>
+    </section>
+
+    <section class="studio" id="studio" aria-labelledby="studio-title">
+      <div class="studio-inner wrap">
+        <div class="section-index" id="studio-title">A small studio<br>with room to grow.</div>
+        <p class="studio-copy">We’re creating apps for <strong>Apple platforms.</strong> There’s nothing to download just yet; we’re just getting started.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer wrap">
+    <a class="identity" href="#top">
+      <span>Foxhollow Labs LLC</span>
+    </a>
+    <span class="footer-note">© 2026 Foxhollow Labs</span>
+  </footer>
+</body>
+</html>
