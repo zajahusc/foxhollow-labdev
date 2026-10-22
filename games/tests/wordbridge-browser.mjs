@@ -26,7 +26,7 @@ try{
   const {context,page}=await setup({viewport:{width,height:1100},colorScheme:width===390?'dark':'light',reducedMotion:'reduce'});await page.goto(base+'/wordbridge/');await page.locator('.endpoints').waitFor();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);await page.screenshot({path:`/tmp/wordbridge-redesign-${width}.png`,fullPage:true});pass(`WordBridge ${width}px: responsive collection layout${width===390?', dark mode':''}`);await context.close();
  }
  {
-  const {context,page}=await setup();const response=await page.goto(base+'/wordorbit/');assert.equal(response.status(),404);await page.goto(base+'/games/');assert.equal(await page.locator('[href="/wordorbit/"]').count(),0);assert.equal(await page.locator('.collection-card').count(),5);pass('Retired route is 404 and the collection contains only five active games');await context.close();
+  const {context,page}=await setup();const response=await page.goto(base+'/wordorbit/');assert.equal(response.status(),404);await page.goto(base+'/games/');assert.equal(await page.locator('[href="/wordorbit/"]').count(),0);assert.equal(await page.locator('.collection-card').count(),13);pass('Retired route is 404 and the collection contains thirteen active games');await context.close();
  }
  assert.deepEqual(errors,[]);pass('No uncaught WordBridge browser errors');console.log(`${checks} WordBridge/removal browser checks passed.`);
 }finally{await browser.close();}

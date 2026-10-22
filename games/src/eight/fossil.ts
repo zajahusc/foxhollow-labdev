@@ -1,0 +1,6 @@
+import {normalized,validation} from './common.js';
+import type {Meta} from './common.js';
+export interface FossilPuzzle extends Meta{game:'wordfossil';mode?:'root'|'detective'|'evolution'|'reconstruction';forms?:string[];periods?:string[];pieces?:{prefix:string;root:string;suffix:string};root:string;aliases:string[];language:string;meaning:string;words:string[];explanation:string;sources:string[];hints:string[]}
+export type FossilAction={type:'guess';answer:string}|{type:'hint'};
+export const fossilAnswer=(p:FossilPuzzle,answer:string)=>[p.root,...p.aliases].some(x=>normalized(x)===normalized(answer));
+export function validateFossil(p:FossilPuzzle){const errors:string[]=[];if(!p.root||p.words.length<(p.mode==='reconstruction'?2:3)||p.sources.length<(p.mode==='evolution'||p.mode==='reconstruction'?1:3)||p.sources.some(s=>!s.startsWith('https://'))||!p.language||!p.meaning||p.hints.length!==3)errors.push('Missing etymology verification metadata.');if(p.mode==='evolution'&&(!p.forms||p.forms.length!==3||p.periods?.length!==3))errors.push('Missing historical forms.');if(p.mode==='reconstruction'&&!p.pieces)errors.push('Missing morpheme metadata.');return validation(errors,null,'Documented root and three individually sourced descendants. Historical relationships are source-backed editorial data, not inferred from spelling.');}

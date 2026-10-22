@@ -7,8 +7,8 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test games/tests/*.test.mjs",
-    "test:browser": "node games/tests/browser.mjs && node games/tests/newgames-browser.mjs && node games/tests/wordbridge-browser.mjs && node games/tests/daily-rollover-browser.mjs",
-    "dev": "python3 -m http.server 8090 --bind 127.0.0.1",
+    "test:browser": "node games/tests/browser.mjs && node games/tests/newgames-browser.mjs && node games/tests/wordbridge-browser.mjs && node games/tests/daily-rollover-browser.mjs && node games/tests/eight-browser.mjs",
+    "dev": "python3 games/scripts/serve.py",
     "lint": "eslint games/src games/tests eslint.config.mjs"
   },
   "devDependencies": {

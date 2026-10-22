@@ -1,9 +1,9 @@
 name: Daily games checks
 on:
   push:
-    paths: ['games/**', 'fourthword/**', 'oddrule/**', 'wordbridge/**', 'semanticgravity/**', 'wordweave/**', 'package*.json', 'tsconfig.json', 'eslint.config.mjs', '.github/workflows/games-checks.yml']
+    paths: ['games/**', 'fourthword/**', 'oddrule/**', 'wordbridge/**', 'semanticgravity/**', 'wordweave/**', 'lexiconlock/**', 'alibi/**', 'missingmove/**', 'tiletheory/**', 'wordfossil/**', 'negativelogic/**', 'paradoxbox/**', 'linebyline/**', 'package*.json', 'tsconfig.json', 'eslint.config.mjs', '.github/workflows/games-checks.yml']
   pull_request:
-    paths: ['games/**', 'fourthword/**', 'oddrule/**', 'wordbridge/**', 'semanticgravity/**', 'wordweave/**', 'package*.json', 'tsconfig.json', 'eslint.config.mjs', '.github/workflows/games-checks.yml']
+    paths: ['games/**', 'fourthword/**', 'oddrule/**', 'wordbridge/**', 'semanticgravity/**', 'wordweave/**', 'lexiconlock/**', 'alibi/**', 'missingmove/**', 'tiletheory/**', 'wordfossil/**', 'negativelogic/**', 'paradoxbox/**', 'linebyline/**', 'package*.json', 'tsconfig.json', 'eslint.config.mjs', '.github/workflows/games-checks.yml']
 permissions:
   contents: read
 jobs:
@@ -21,6 +21,6 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Test complete browser journeys
         run: |
-          python3 -m http.server 8090 --bind 127.0.0.1 > /tmp/games-server.log 2>&1 &
+          python3 games/scripts/serve.py > /tmp/games-server.log 2>&1 &
           curl --retry 10 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8090/fourthword/ > /dev/null
           npm run test:browser

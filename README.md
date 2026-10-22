@@ -17,3 +17,5 @@ The two new games use shared TypeScript, build to committed static ES modules, a
 The collection also includes [Semantic Gravity](/semanticgravity/) and [Word Weave](/wordweave/). See [new-game architecture, content counts, sources and operating instructions](games/NEW-GAMES.md). Real versioned GloVe rankings power Gravity; a dictionary-backed constraint solver validates Weave grids, with proven unique daily completions and an explicitly open-ended Free Weave mode.
 
 Word Weave now uses blank, numbered mini-crosswords with Across/Down clues and irregular rectangular layouts. WordBridge uses the shared collection UI while retaining its original game logic and saves. [Current UX update](games/UX-UPDATE.md).
+
+The collection also includes eight new daily games: Lexicon Lock, The Alibi, The Missing Move, Tile Theory, Word Fossil, Negative Logic, Paradox Box and Line by Line. See [game documentation](games/EIGHT-GAMES.md) for mechanics, sources, actual content counts and validation. All daily games reset at midnight New York time.
