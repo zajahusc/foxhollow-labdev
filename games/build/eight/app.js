@@ -1,11 +1,12 @@
+import { readHard, writeHard } from '../daily-options.js';
 import { dailyDay, nextDailyReset } from '../time.js';
 import { el, button, link, label, select, modal, confirm, share, notify } from '../newgames/ui.js';
 import { catalog, levels } from './common.js';
-import { blankSave, storageKey, decode, initial, commit, submit, useHint, reveal, statistics, shareText, explanation, choosePractice, validatePuzzle } from './engine.js';
-import { negativeCategories } from './negative.js';
+import { blankSave, storageKey, decode, initial, commit, submit, useHint, reveal, statistics, shareText, explanation, validatePuzzle } from './engine.js';
 import { renderGame, moveGrid, drawing } from './views.js';
 const game = document.body.dataset.game, info = catalog[game], app = document.getElementById('app');
-let save = blankSave(game), session = null, publication = null, mode = 'daily', level = 2, fossilMode = 'Any', negativeCategory = 'Any', viewedDay = dailyDay(), message = '', busy = false, storageBlocked = false, failure = '', drawings = {}, continuousPlaying = false;
+let save = blankSave(game), session = null, publication = null, viewedDay = dailyDay(), message = '', storageBlocked = false, failure = '', drawings = {}, continuousPlaying = false;
+const busy = false;
 try {
     save = decode(localStorage.getItem(storageKey(game)), game);
 }
@@ -39,9 +40,9 @@ catch { /* Preserve active visit. */ } }
 function daily() { viewedDay = dailyDay(); const saved = save.daily[viewedDay]; if (saved) {
     session = saved;
     return;
-} const id = publication?.schedule[viewedDay], puzzle = publication?.puzzles.find(p => p.id === id); session = puzzle ? initial(puzzle, 'daily', 0, viewedDay) : null; if (session)
+} const id = publication?.schedule[viewedDay], puzzle = publication?.puzzles.find(p => p.id === id); session = puzzle ? { ...initial(puzzle, 'daily', 0, viewedDay), hard: readHard(game) } : null; if (session)
     persist(); }
-function rollover() { if (mode === 'daily' && viewedDay !== dailyDay()) {
+function rollover() { if (viewedDay !== dailyDay()) {
     continuousPlaying = false;
     sync();
     daily();
@@ -73,75 +74,42 @@ function doSubmit() {
         return;
     }
     session = submit(session);
-    message = session.phase === 'playing' ? `That does not satisfy this puzzle. ${8 - session.mistakes} attempts remain.` : '';
+    message = session.phase === 'playing' ? `That does not satisfy this puzzle. ${(session.hard ? 3 : 8) - session.mistakes} attempts remain.` : '';
     if (session.phase !== 'playing')
         continuousPlaying = false;
     persist();
     render(session.phase === 'playing' ? 'answer-input' : 'result-heading');
 }
-function switchMode(next) { if (busy || next === mode)
-    return; const action = () => { continuousPlaying = false; mode = next; message = ''; sync(); if (mode === 'daily')
-    daily();
-else if (save.practice) {
-    session = save.practice;
-    level = session.puzzle.level;
-}
-else {
-    void newPractice();
-    return;
-} render(); }; if (session?.phase === 'playing')
-    confirm('Switch puzzles?', 'Your progress is saved. You can return whenever you like.', action);
-else
-    action(); }
-async function generatedPractice() { return new Promise((resolve, reject) => { const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' }); const timer = setTimeout(() => { worker.terminate(); reject(Error('The generator took too long. Try another puzzle.')); }, 20000); worker.onmessage = event => { clearTimeout(timer); worker.terminate(); if (event.data.error)
-    reject(Error(event.data.error));
-else
-    resolve(event.data.puzzle); }; worker.onerror = event => { event.preventDefault(); clearTimeout(timer); worker.terminate(); reject(Error('The puzzle worker could not load. Reload and try again.')); }; worker.postMessage({ game, level, seed: `practice-${game}-${save.serial}-${Date.now()}`, category: negativeCategory === 'Any' ? undefined : negativeCategory }); }); }
-async function newPractice() { if (!publication || busy)
-    return; const run = async () => { busy = true; continuousPlaying = false; message = ''; mode = 'practice'; save.serial++; render(); try {
-    const procedural = ['lexiconlock', 'alibi', 'missingmove', 'tiletheory', 'negativelogic'].includes(game);
-    const p = procedural ? await generatedPractice() : choosePractice(publication.puzzles.filter(p => game !== 'wordfossil' || fossilMode === 'Any' || p.game === 'wordfossil' && p.mode === fossilMode), level, [...save.recent, ...(session ? [session.puzzle.id] : [])], save.serial, game);
-    if (!validatePuzzle(p).valid)
-        throw Error('This puzzle did not pass validation.');
-    session = initial(p, 'practice', save.serial);
-    persist();
-}
-catch (error) {
-    save.serial = Math.max(0, save.serial - 1);
-    if (session)
-        mode = session.mode;
-    message = error instanceof Error ? error.message : 'Practice could not be prepared.';
-    notify(message);
-}
-finally {
-    busy = false;
-    render();
-} }; if (session?.phase === 'playing' && session.mode === 'practice' && mode === 'practice')
-    confirm('Start a fresh practice puzzle?', 'This replaces unfinished practice. Your daily progress stays saved.', () => void run());
-else
-    await run(); }
+function untouched() { if (!session || session.phase !== 'playing')
+    return false; const g = session.progress; return !session.mistakes && !session.hints && !g.text && !g.movePath.length && !g.strokes && !g.past.length && !Object.keys(g.notes).length && g.choice < 0 && g.liar < 0 && g.clues === 1; }
 const help = {
-    lexiconlock: ['Use every constraint to identify one word in the frozen published dictionary. A, E, I, O and U are vowels; Y is a consonant.', 'Check off clues you have considered. The letter keyboard and notebook are optional. Guesses do not reveal individual letter correctness.', '500 base points; a miss costs 50, a hint costs 75. A first-attempt solution adds 100.'],
+    lexiconlock: ['Use every constraint to identify one word in the frozen published dictionary. A, E, I, O and U are vowels; Y is a consonant.', 'Check off clues you have considered. The letter keyboard and notebook are optional. Guesses do not reveal individual letter correctness.', 'Up to 100 points. A miss costs 10 and a hint costs 10. Hard mode allows three wrong submissions and no hints.'],
     alibi: ['Reconstruct the listed order with the person selectors, then select the one false testimony. Public evidence is always true.', 'One testimony belongs to each character. AND is a conjunction: a testimony is false if either clause is false. Exactly one testimony is false overall.', 'Expert and Master add circular badge assignments. Follow the displayed badge order and choose its starting badge.'],
     missingmove: ['Use only the printed operations to transform the working board into the target within its move limit. Each button applies one move immediately.', 'Rows wrap one place right. Columns wrap one place down. Reversals mirror only the named row/column. Board rotation is 90° clockwise. Swaps exchange the two numbered cells. A slide moves a neighboring tile into the specified empty cell; it is legal only while that destination is empty.', 'Undo, redo and reset do not count as extra moves. Any valid route to the target within the limit is accepted.'],
     tiletheory: ['Each row, column and dotted constellation must contain one of every tile. Colors repeat the shapes for a second visual cue.', 'Select a cell, then choose a tile or press its number. Arrow keys move; Delete erases. Given cells stay fixed.', 'Pencil marks are personal notes. Check rules distinguishes satisfied, violated and incomplete rules without showing the final answer.'],
-    wordfossil: ['Identify the documented historical stem shared by three modern words. A common stem or approved historical form is accepted.', 'These are real etymological families. Similar spelling alone is not evidence of shared origin. Sources are linked after completion.', 'Practice includes Shared Root, Etymology Detective, Word Evolution and Root Reconstruction. Historical forms are sourced, with period labels explained after completion. 700 points; a hint costs 100, a miss 50. Extra detective fragments cost 30.'],
-    negativelogic: ['Every clue says something the answer is NOT. Cross out candidates that match the excluded property.', 'You can restore or mark possibilities freely. Use a radio button to pick the final answer. Additional exclusions lower the available score by 30.', 'Choose numbers, spelling, geometry, animals, countries, chemical elements, dated history or acoustic instruments. Definitions and citations accompany the factual sets. Only the complete clue set guarantees a unique survivor.'],
-    paradoxbox: ['Read the scenario literally, then choose the explanation that fits every stated fact.', 'Harder scenarios initially hide choices. Reveal them when ready, or request a clue first.', 'Each alternative has a specific contradiction, explained after the game. The 20 original scenes cycle in practice.'],
-    linebyline: ['Begin with a blank canvas. Draw a line to reveal the next meaningful stroke, or enter the landmark at any time.', 'Approved aliases are case and accent insensitive. Generic answers such as tower are not enough. Hints reveal continent, category and country; change their order in Settings.', 'The first stroke allows 1,000 points, the final stroke 100 before penalties. Each miss costs 30 and each hint 75. Continuous drawing is optional in Settings.'],
+    wordfossil: ['Identify the documented historical stem shared by three modern words. A common stem or approved historical form is accepted.', 'These are real etymological families. Similar spelling alone is not evidence of shared origin. Sources are linked after completion.', 'Dailies include Shared Root, Etymology Detective, Word Evolution and Root Reconstruction. Historical forms are sourced, with period labels explained after completion. Up to 100 points; hints and misses cost 10. Extra detective fragments cost 3.'],
+    negativelogic: ['Every clue says something the answer is NOT. Cross out candidates that match the excluded property.', 'You can restore or mark possibilities freely. Use a radio button to pick the final answer. Additional exclusions lower the available score by 3.', 'Choose numbers, spelling, geometry, animals, countries, chemical elements, dated history or acoustic instruments. Definitions and citations accompany the factual sets. Only the complete clue set guarantees a unique survivor.'],
+    paradoxbox: ['Read the scenario literally, then choose the explanation that fits every stated fact.', 'Harder scenarios initially hide choices. Reveal them when ready, or request a clue first.', 'Each alternative has a specific contradiction, explained after the game. A new daily arrives at midnight New York time.'],
+    linebyline: ['Begin with a blank canvas. Draw a line to reveal the next meaningful stroke, or enter the landmark at any time.', 'Approved aliases are case and accent insensitive. Generic answers such as tower are not enough. Hints reveal continent, category and country; change their order in Settings.', 'The first stroke allows 100 points, the final stroke 10 before penalties. Each miss costs 3 and each hint 10. Continuous drawing is optional in Settings.'],
 };
-function instructions() { let step = 0; const body = el('div'), demo = button('Try a practice example', () => { document.getElementById('dialog').close(); mode = 'practice'; void newPractice(); }, 'primary'); const show = () => { body.replaceChildren(el('p', `Step ${step + 1} of ${help[game].length}`, 'eyebrow'), el('p', help[game][step])); const actions = el('div', '', 'actions'); if (step)
+function instructions() { let step = 0; const body = el('div'), demo = button('Play today’s puzzle', () => { document.getElementById('dialog').close(); }, 'primary'); const show = () => { body.replaceChildren(el('p', `Step ${step + 1} of ${help[game].length}`, 'eyebrow'), el('p', help[game][step])); const actions = el('div', '', 'actions'); if (step)
     actions.append(button('Previous', () => { step--; show(); })); if (step < help[game].length - 1)
     actions.append(button('Next instruction', () => { step++; show(); }));
 else
-    actions.append(demo); body.append(actions); }; show(); modal('A little way to play.', [body, el('p', 'Every daily resets at midnight New York time. Eight incorrect submissions end a puzzle. Revealing scores zero. Practice never changes your daily streak.', 'muted')]); }
-function settings() { const theme = select('Color theme', [['system', 'Follow device'], ['light', 'Light'], ['dark', 'Dark']], save.theme, v => { save.theme = v; document.documentElement.dataset.theme = v; persist(); }); const animation = el('input'); animation.type = 'checkbox'; animation.checked = save.animation; animation.onchange = () => { save.animation = animation.checked; persist(); }; const nodes = [label('Color theme', theme), label('Animate new drawing strokes', animation)]; if (game === 'linebyline') {
+    actions.append(demo); body.append(actions); }; show(); modal('A little way to play.', [body, el('p', 'Every daily resets at midnight New York time. Normal allows eight wrong submissions; Hard allows three and no hints. Revealing scores zero.', 'muted')]); }
+function settings() { const difficulty = select('Difficulty', [['normal', 'Normal'], ['hard', 'Hard']], readHard(game) ? 'hard' : 'normal', value => { writeHard(game, value === 'hard'); if (untouched() && session) {
+    session = { ...session, hard: value === 'hard' };
+    persist();
+    render();
+}
+else
+    notify('Difficulty saved for your next daily. Today’s mode stays locked.'); }); const theme = select('Color theme', [['system', 'Follow device'], ['light', 'Light'], ['dark', 'Dark']], save.theme, v => { save.theme = v; document.documentElement.dataset.theme = v; persist(); }); const animation = el('input'); animation.type = 'checkbox'; animation.checked = save.animation; animation.onchange = () => { save.animation = animation.checked; persist(); }; const nodes = [label('Difficulty', difficulty), el('p', 'Hard: three wrong submissions and no hints. Choose before you start; later changes apply to your next daily.', 'muted'), label('Color theme', theme), label('Animate new drawing strokes', animation)]; if (game === 'linebyline') {
     const continuous = el('input');
     continuous.type = 'checkbox';
     continuous.checked = save.continuous;
     continuous.onchange = () => { save.continuous = continuous.checked; continuousPlaying = false; persist(); render(); };
     nodes.push(label('Offer continuous drawing controls', continuous), label('Geographic hint order', select('Hint order', [['geography', 'Continent → category → country'], ['category', 'Category → continent → country']], save.hintOrder, v => { save.hintOrder = v; persist(); })));
-} nodes.push(el('p', 'Progress and statistics are saved in this browser. There is no account or device sync.', 'muted'), button('Clear this game’s saved progress', () => confirm('Clear this game?', 'This removes every score and puzzle saved for this game on this browser.', () => { save = blankSave(game); session = null; mode = 'daily'; document.documentElement.dataset.theme = 'system'; daily(); persist(); render(); }), 'danger')); modal('A little your way.', nodes); }
+} nodes.push(el('p', 'Progress and statistics are saved in this browser. There is no account or device sync.', 'muted'), button('Clear this game’s saved progress', () => confirm('Clear this game?', 'This removes every score and puzzle saved for this game on this browser.', () => { save = blankSave(game); session = null; document.documentElement.dataset.theme = 'system'; daily(); persist(); render(); }), 'danger')); modal('A little your way.', nodes); }
 function showStats() { const stats = statistics(save), grid = el('div', '', 'stats-grid'); for (const [text, value] of Object.entries({ 'Total played': stats.attempted, 'Completed': stats.completed, 'Win rate': `${stats.winRate}%`, 'Daily streak': stats.streak, 'Longest streak': stats.longest, 'Personal best': stats.best, 'Average score': stats.average, 'Average hints': stats.averageHints })) {
     const item = el('div');
     item.append(el('strong', String(value)), el('span', text));
@@ -150,11 +118,11 @@ function showStats() { const stats = statistics(save), grid = el('div', '', 'sta
     const row = el('tr');
     row.append(el('th', levels[r.level - 1]), el('td', `${r.played} finished`), el('td', `${r.wins} wins`));
     table.append(row);
-} const nodes = [grid, table, el('p', 'Streaks count successful daily solves once per New York date. Reveals and exhausted attempts score zero. Practice does not affect streaks.', 'muted')]; if (game === 'linebyline') {
+} const nodes = [grid, table, el('p', 'Streaks count successful daily solves once per New York date. Reveals and exhausted attempts score zero. ', 'muted')]; if (game === 'linebyline') {
     nodes.push(el('p', `Average strokes on wins: ${stats.averageStrokes} · Fewest strokes: ${stats.fewestStrokes}`));
     for (const field of ['continent', 'category']) {
         const counts = new Map();
-        for (const r of save.records.filter(r => r.won))
+        for (const r of save.records.filter(r => r.won && r.mode === 'daily'))
             counts.set(r[field], (counts.get(r[field]) || 0) + 1);
         nodes.push(el('h3', field === 'continent' ? 'Wins by continent' : 'Wins by landmark category'));
         for (const [name, n] of counts)
@@ -165,7 +133,7 @@ function resultView(parent) {
     if (!session)
         return;
     const s = session, p = s.puzzle;
-    const title = el('h2', s.phase === 'solved' ? 'A little discovery.' : s.phase === 'lost' ? 'The answer, uncovered.' : 'The full picture.', 'result-title');
+    const title = el('h2', s.phase === 'solved' ? 'Correct! You solved it.' : s.phase === 'lost' ? 'The answer, uncovered.' : 'The full picture.', 'result-title');
     title.id = 'result-heading';
     title.tabIndex = -1;
     parent.append(el('p', `${s.score} POINTS · ${s.hints} HINTS · ${s.mistakes} MISSES`, 'eyebrow'), title);
@@ -194,31 +162,34 @@ function resultView(parent) {
             clearInterval(timer); }, save.animation ? 450 : 80); });
         parent.append(replay);
     }
+    const details = el('details', '', 'solution-details');
+    details.append(el('summary', 'How it works'));
     for (const text of explanation(p))
-        parent.append(el('p', text, 'explanation'));
+        details.append(el('p', text, 'explanation'));
+    parent.append(details);
     if (p.game === 'wordfossil' || p.game === 'linebyline') {
         const sources = el('div', '', 'source-links');
         sources.append(el('h3', 'Explore the sources'));
         p.sources.forEach((url, i) => { const a = link(`Reference ${i + 1} ↗`, url); a.target = '_blank'; a.rel = 'noopener noreferrer'; sources.append(a); });
-        parent.append(sources);
+        details.append(sources);
     }
     if (p.game === 'negativelogic' && p.candidates.some(c => c.sources?.length)) {
-        const details = el('details', '', 'notebook');
-        details.append(el('summary', 'Candidate attributes & verification sources'));
+        const facts = el('details', '', 'notebook');
+        facts.append(el('summary', 'Candidate attributes & verification sources'));
         for (const c of p.candidates) {
-            details.append(el('h3', c.label), el('p', p.clues.filter(clue => clue.kind === 'tag').map(clue => `${clue.text.slice(10)} ${c.tags?.[String(clue.value)] ? 'yes' : 'no'}`).join(' · '), 'muted'));
+            facts.append(el('h3', c.label), el('p', p.clues.filter(clue => clue.kind === 'tag').map(clue => `${clue.text.slice(10)} ${c.tags?.[String(clue.value)] ? 'yes' : 'no'}`).join(' · '), 'muted'));
             for (const [i, url] of (c.sources || []).entries()) {
                 const a = link(`Reference ${i + 1} ↗`, url);
                 a.target = '_blank';
                 a.rel = 'noopener noreferrer';
-                details.append(a, el('span', ' '));
+                facts.append(a, el('span', ' '));
             }
         }
-        parent.append(details);
+        details.append(facts);
     }
     const actions = el('div', '', 'actions');
-    actions.append(button('Share result ↗', () => void share(shareText(s)), 'primary'), button('Play another', () => { mode = 'practice'; void newPractice(); }));
-    parent.append(actions, el('p', 'Your first daily result is saved. Replaying does not replace it.', 'muted'));
+    actions.append(button('Share result ↗', () => void share(shareText(s)), 'primary'), link('Explore more daily games ↗', '/games/', 'secondary'));
+    parent.append(actions, el('p', 'Your result is saved. Come back tomorrow for a new puzzle.', 'muted'));
 }
 function render(focus) {
     document.documentElement.dataset.theme = save.theme;
@@ -232,28 +203,7 @@ function render(focus) {
     nav.append(link('All games ↗', '/games/'), select('Jump to another puzzle', Object.entries(catalog).map(([id, c]) => [id, c.name]), game, v => { location.href = `/${v}/`; }));
     const hero = el('header', '', 'game-hero');
     hero.append(el('p', 'A FOXHOLLOW DAILY PUZZLE', 'eyebrow'), el('div', info.mark, 'game-mark'), el('h1', info.name), el('p', info.tagline, 'tagline'));
-    const modes = el('nav', '', 'mode-tabs');
-    modes.setAttribute('aria-label', 'Puzzle mode');
-    for (const [value, text] of [['daily', 'Daily challenge'], ['practice', 'Unlimited practice']]) {
-        const b = button(text, () => switchMode(value), mode === value ? 'active' : '');
-        b.setAttribute('aria-pressed', String(mode === value));
-        b.disabled = busy;
-        modes.append(b);
-    }
-    app.append(head, nav, hero, modes);
-    if (mode === 'practice') {
-        const filters = el('div', '', 'practice-filters');
-        filters.append(label('Difficulty', select('Difficulty', levels.map((l, i) => [String(i + 1), l]), String(level), v => { level = Number(v); })), button('New puzzle ↻', () => void newPractice()));
-        if (game === 'negativelogic')
-            filters.insertBefore(label('Category', select('Category', [['Any', 'Any category'], ...negativeCategories.map((c) => [c, c])], negativeCategory, v => { negativeCategory = v; })), filters.lastChild);
-        if (game === 'wordfossil')
-            filters.insertBefore(label('Fossil mode', select('Fossil mode', [['Any', 'Any mode'], ['root', 'Shared Root'], ['detective', 'Etymology Detective'], ['evolution', 'Word Evolution'], ['reconstruction', 'Root Reconstruction']], fossilMode, v => { fossilMode = v; })), filters.lastChild);
-        app.append(filters);
-        if (['wordfossil', 'paradoxbox', 'linebyline'].includes(game))
-            app.append(el('p', `Practice explores ${publication?.puzzles.length || 20} verified ${game === 'linebyline' ? 'illustrations' : game === 'wordfossil' ? 'language puzzles' : 'original scenarios'}. It avoids recent entries, then cycles through the collection.`, 'muted practice-note'));
-        else
-            app.append(el('p', 'New seeded puzzles are generated and validated in a background worker. The published dictionary and mathematical space are finite.', 'muted practice-note'));
-    }
+    app.append(head, nav, hero);
     const board = el('section', '', 'board eight-board');
     board.setAttribute('aria-label', `${info.name} puzzle`);
     board.setAttribute('aria-busy', String(busy));
@@ -264,10 +214,10 @@ function render(focus) {
         board.append(el('p', busy ? 'Preparing a verified puzzle…' : 'Opening the puzzle collection…', 'loading'));
     }
     else if (!session)
-        board.append(el('h2', 'A fresh chapter is being prepared.'), el('p', 'There is no published daily for this New York date. Unlimited practice is available.'), button('Play practice', () => { mode = 'practice'; void newPractice(); }, 'primary'));
+        board.append(el('h2', 'A fresh chapter is being prepared.'), el('p', 'There is no published daily for this New York date. Please check back tomorrow.'));
     else {
         const edition = el('div', '', 'edition');
-        edition.append(el('span', mode === 'daily' ? `DAILY / ${session.day}` : 'PRACTICE / NO STREAK PRESSURE'), el('span', levels[session.puzzle.level - 1], 'difficulty'));
+        edition.append(el('span', `DAILY / ${session.day}`), el('span', `${session.hard ? 'HARD' : 'NORMAL'} MODE`, 'difficulty'));
         board.append(edition);
         if (session.phase !== 'playing')
             resultView(board);
@@ -293,7 +243,7 @@ function render(focus) {
                 notify('A new daily has started. Choose again when ready.');
                 return;
             } session = useHint(session, save.hintOrder); persist(); render(); });
-            hint.disabled = session.hints >= 3;
+            hint.disabled = Boolean(session.hard) || session.hints >= 3;
             tools.append(hint, button('Reveal solution', () => confirm('Reveal the solution?', 'This ends the puzzle with zero points. Your first daily result cannot be replaced.', () => { if (!session)
                 return; const before = session; rollover(); if (session !== before) {
                 notify('A new daily has started. Choose again when ready.');
@@ -304,13 +254,13 @@ function render(focus) {
                 persist();
                 render('result-heading');
             } }), 'text-button'));
-            board.append(tools, el('p', `Eight incorrect submissions end the puzzle. ${session.mistakes}/8 used. Hints and misses reduce your score.`, 'muted'));
+            board.append(tools, el('p', `${session.hard ? 3 : 8} incorrect submissions end the puzzle. ${session.mistakes}/${session.hard ? 3 : 8} used.${session.hard ? ' Hard mode: no hints.' : ''} Hints and misses reduce your score.`, 'muted'));
         }
     }
     app.append(board);
     const footer = el('footer', '', 'game-footer'), count = el('p');
     count.id = 'countdown';
-    footer.append(count, el('p', 'A few quiet minutes. A fresh way to think.'), link('Explore the puzzle collection ↗', '/games/'), link('Sources & puzzle policy ↗', '/games/EIGHT-GAMES.md'), el('p', storageBlocked ? 'Storage unavailable · Playable for this visit' : 'Saved on this browser · No account needed', 'muted'));
+    footer.append(count, el('p', 'A few quiet minutes. A fresh way to think.'), link('Explore the puzzle collection ↗', '/games/'), link('Sources & puzzle policy ↗', '/games/DAILY-ONLY.md'), el('p', storageBlocked ? 'Storage unavailable · Playable for this visit' : 'Saved on this browser · No account needed', 'muted'));
     app.append(footer);
     countdown();
     if (focus)
@@ -350,10 +300,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden)
     rollover(); });
 window.addEventListener('storage', e => { if (e.key === storageKey(game)) {
     sync();
-    if (mode === 'daily')
-        daily();
-    else
-        session = save.practice;
+    daily();
     render();
 } });
 void load();

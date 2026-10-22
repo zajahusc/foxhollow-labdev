@@ -1,0 +1,48 @@
+/* One identity per game. Keep this after each game's layout stylesheet. */
+[data-game=wordbridge]{--game-color:#86601e;--game-night:#e3bc70;--game-button:#86601e}
+[data-game=fourthword]{--game-color:#68449f;--game-night:#c4a2f2;--game-button:#68449f}
+[data-game=oddrule]{--game-color:#28633a;--game-night:#a2d18a;--game-button:#28633a}
+[data-game=semanticgravity]{--game-color:#355caf;--game-night:#9db9fa;--game-button:#355caf}
+[data-game=wordweave]{--game-color:#08756d;--game-night:#79d2bc;--game-button:#08756d}
+[data-game=lexiconlock]{--game-color:#35466e;--game-night:#a7b5dc;--game-button:#35466e}
+[data-game=alibi]{--game-color:#963f53;--game-night:#f1a1af;--game-button:#963f53}
+[data-game=missingmove]{--game-color:#ad4b16;--game-night:#ffad70;--game-button:#ad4b16}
+[data-game=tiletheory]{--game-color:#63680f;--game-night:#cdd86a;--game-button:#63680f}
+[data-game=wordfossil]{--game-color:#80513b;--game-night:#d8ad94;--game-button:#80513b}
+[data-game=negativelogic]{--game-color:#49616c;--game-night:#a4c2cc;--game-button:#49616c}
+[data-game=paradoxbox]{--game-color:#9b3583;--game-night:#e9a1d4;--game-button:#9b3583}
+[data-game=linebyline]{--game-color:#08738e;--game-night:#7bd2ec;--game-button:#08738e}
+
+html :is(body,.collection-card,.game-card)[data-game]{
+ --accent:var(--game-color);
+ --accent-ink:var(--game-color);
+ --accent-soft:color-mix(in srgb,var(--game-color) 11%,var(--card,#fffefa));
+}
+/* Text accents brighten in dark themes; buttons retain a deep color for white text. */
+html[data-theme=dark] :is(body,.collection-card)[data-game]{
+ --accent:var(--game-night);
+ --accent-ink:var(--game-night);
+ --accent-soft:color-mix(in srgb,var(--game-night) 15%,var(--card,#24262b));
+}
+@media(prefers-color-scheme:dark){
+ html:not([data-theme=light]) :is(body,.collection-card)[data-game]{
+  --accent:var(--game-night);
+  --accent-ink:var(--game-night);
+  --accent-soft:color-mix(in srgb,var(--game-night) 15%,var(--card,#24262b));
+ }
+}
+html body[data-game] .primary.primary{background:var(--game-button);border-color:var(--game-button);color:#fff}
+html body[data-game] .primary.primary:disabled{background:var(--line);border-color:transparent;color:var(--muted)}
+html body[data-game] .game-mark{color:var(--accent);background:var(--accent-soft)}
+html body[data-game] .gravity-center{background:var(--game-button);color:#fff}
+html body[data-game] .crossword-grid .weave-cell.current{background:var(--game-button);color:#fff}
+html :is(.collection-card,.game-card)[data-game]{border-top:3px solid var(--accent)}
+html :is(.collection-card,.game-card)[data-game]:hover{border-color:var(--accent);background:var(--accent-soft)}
+html :is(.collection-card,.game-card)[data-game] :is(.art,strong){color:var(--accent)}
+html .game-card[data-game] .eyebrow{color:var(--accent)}
+
+/* Disclosure keeps the result clear; reasoning is available on demand. */
+.solution-details{margin:24px 0;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:13px;line-height:1.8}
+.solution-details>summary{cursor:pointer;color:var(--accent);font-weight:600;min-height:44px;align-content:center}
+.solution-details[open]>summary{margin-bottom:16px}
+.solution-details>p{line-height:1.8}

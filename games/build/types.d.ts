@@ -53,6 +53,7 @@ export type Puzzle = FourthPuzzle | OddPuzzle;
 export type Mode = 'daily' | 'practice';
 export type Phase = 'playing' | 'naming' | 'solved' | 'failed';
 export interface Session {
+    hard?: boolean;
     key: string;
     puzzle: Puzzle;
     mode: Mode;
@@ -64,7 +65,7 @@ export interface Session {
     nameRule: boolean;
     ruleAnswer: string | null;
     score: number;
-    maxMistakes: 3 | 4 | 5;
+    maxMistakes: 2 | 3 | 4 | 5;
     started: number;
     finished: number | null;
 }
@@ -87,6 +88,7 @@ export interface Settings {
     maxMistakes: 3 | 4 | 5;
 }
 export interface SavedData {
+    scoreVersion?: 2;
     version: 1;
     daily: {
         [day: string]: Session;

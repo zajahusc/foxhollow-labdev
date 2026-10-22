@@ -1,3 +1,4 @@
+import {migrateScores} from '../daily-options.js';
 import {dailyDay,previousDay} from '../engine.js';
 import {hash,normalize,shuffle} from '../data.js';
 import type {Level} from '../types.js';
@@ -6,7 +7,7 @@ export {dailyDay,previousDay,normalize,shuffle};
 export const names:Record<NewGame,string>={semanticgravity:'Semantic Gravity',wordweave:'Word Weave'};
 export const levels=['Easy','Normal','Hard','Expert','Master'];
 export const storageKey=(game:NewGame)=>`foxhollow.${game}.v1`;
-export function blankSave():Save{return {version:1,daily:{},practice:null,records:[],attempted:[],recent:[],serial:0,theme:'system',dailyLimit:null,feedback:[]};}
+export function blankSave():Save{return {version:1,scoreVersion:2,daily:{},practice:null,records:[],attempted:[],recent:[],serial:0,theme:'system',dailyLimit:null,feedback:[]};}
 export function initial(game:NewGame,id:string,level:Level,mode:'daily'|'practice',serial:number,puzzle?:WeavePuzzle,limit:number|null=null):NewSession{
  const day=dailyDay(),base={key:mode==='daily'?`daily:${day}`:`practice:${serial}`,game,mode,day,level,phase:'playing' as const,started:Date.now(),finished:null,score:0,guesses:[],mistakes:0,hints:0};
  if(game==='semanticgravity')return {...base,game,puzzleId:id,ranks:[],limit:mode==='practice'?null:limit||[25,20,15,12,10][level-1]!} satisfies GravitySession;
@@ -31,7 +32,7 @@ export function decode(raw:string|null,game:NewGame):Save{
   if(Array.isArray(v.records)){const seen=new Set();d.records=v.records.filter((x):x is Result=>object(x)&&typeof x.key==='string'&&typeof x.puzzleId==='string'&&typeof x.day==='string'&&(x.mode==='daily'||x.mode==='practice')&&typeof x.won==='boolean'&&finite(x.score)&&finite(x.guesses)&&finite(x.hints)&&finite(x.level)&&finite(x.seconds)).filter(x=>{if(seen.has(x.key))return false;seen.add(x.key);return true;});}
   if(strings(v.attempted))d.attempted=[...new Set(v.attempted)];if(strings(v.recent))d.recent=v.recent.slice(0,200);if(finite(v.serial))d.serial=v.serial;
   if(v.theme==='light'||v.theme==='dark')d.theme=v.theme;if(finite(v.dailyLimit)&&v.dailyLimit>=10&&v.dailyLimit<=50)d.dailyLimit=v.dailyLimit;
-  if(Array.isArray(v.feedback))d.feedback=v.feedback.filter((x):x is Save['feedback'][number]=>object(x)&&typeof x.puzzleId==='string'&&typeof x.guess==='string'&&typeof x.date==='string');return d;
+  if(Array.isArray(v.feedback))d.feedback=v.feedback.filter((x):x is Save['feedback'][number]=>object(x)&&typeof x.puzzleId==='string'&&typeof x.guess==='string'&&typeof x.date==='string');return migrateScores(d,v.scoreVersion);
  }catch{return blankSave();}
 }
 export function puzzleId(s:NewSession):string{return s.game==='wordweave'?s.puzzle.id:s.puzzleId;}
@@ -42,11 +43,11 @@ export function commit(d:Save,s:NewSession):Save{
  return {...d,daily:s.mode==='daily'?{...d.daily,[s.day]:s}:d.daily,practice:s.mode==='practice'?s:d.practice,records,attempted:d.attempted.includes(s.key)?d.attempted:[...d.attempted,s.key],recent:done?[puzzleId(s),...(s.game==='wordweave'?['grid-'+hash(s.puzzle.layout+'|'+s.puzzle.solution)]:[]),...d.recent.filter(id=>id!==puzzleId(s))].slice(0,200):d.recent};
 }
 export function statistics(d:Save,today=dailyDay()){
- const wins=d.records.filter(r=>r.won),days=[...new Set(wins.filter(r=>r.mode==='daily').map(r=>r.day))].sort();let longest=0,run=0,prev='';
+ const records=d.records.filter(r=>r.mode==='daily');const wins=records.filter(r=>r.won),days=[...new Set(wins.filter(r=>r.mode==='daily').map(r=>r.day))].sort();let longest=0,run=0,prev='';
  for(const day of days){run=previousDay(day)===prev?run+1:1;longest=Math.max(run,longest);prev=day;}
  let streak=0,day=days.includes(today)?today:previousDay(today);while(days.includes(day)){streak++;day=previousDay(day);}
- const total=d.records.reduce((n,r)=>n+r.score,0);
- return {attempted:d.attempted.length,finished:d.records.length,wins:wins.length,winRate:d.records.length?Math.round(100*wins.length/d.records.length):0,streak,longest,total,best:Math.max(0,...d.records.map(x=>x.score)),average:d.records.length?Math.round(total/d.records.length):0};
+ const total=records.reduce((n,r)=>n+r.score,0);
+ return {attempted:d.attempted.filter(k=>k.startsWith('daily:')).length,finished:records.length,wins:wins.length,winRate:records.length?Math.round(100*wins.length/records.length):0,streak,longest,total,best:Math.max(0,...records.map(x=>x.score)),average:records.length?Math.round(total/records.length):0};
 }
 export function giveUp(s:NewSession):NewSession{return s.phase!=='playing'?s:{...s,phase:'failed',score:0,finished:Date.now()};}
 export function resultText(s:NewSession):string{return `${names[s.game].toUpperCase()} · ${s.mode==='daily'?s.day:'Practice'}\n${levels[s.level-1]} · ${s.phase==='solved'?'Solved ◆':'Revealed ◇'}\nScore: ${s.score} · Hints: ${s.hints} · ${s.game==='wordweave'?`Incorrect submissions: ${s.mistakes}`:`Guesses: ${s.guesses.length}`}\nhttps://foxhollowlabs.dev/${s.game}/`;}

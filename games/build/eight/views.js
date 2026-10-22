@@ -119,7 +119,14 @@ export function renderGame(ctx, parent) {
         } });
         undo.disabled = !g.past.length;
         redo.disabled = !g.future.length;
-        controls.append(button(g.pencil ? 'Pencil on' : 'Pencil off', () => { g.pencil = !g.pencil; ctx.change(); }), undo, redo, button('Check rules', () => { const conflicts = tileConflicts(p, g.board); const done = tileGroups(p).filter(group => group.every(i => g.board[i]) && !group.some(i => conflicts.includes(i))).length; ctx.message(conflicts.length ? `Rule violated in ${conflicts.length} cells. No final answers revealed.` : `${done} rules satisfied; ${tileGroups(p).length - done} not yet decidable. No violations.`); }), button('Reset grid', () => { g.past.push([...g.board]); g.board = [...p.givens]; g.future = []; g.notes = {}; ctx.change(); }));
+        controls.append(button(g.pencil ? 'Pencil on' : 'Pencil off', () => { g.pencil = !g.pencil; ctx.change(); }), undo, redo, button('Check rules', () => { if (s.hard) {
+            ctx.message('Rule checking is off in Hard mode.');
+            return;
+        } const conflicts = tileConflicts(p, g.board); const done = tileGroups(p).filter(group => group.every(i => g.board[i]) && !group.some(i => conflicts.includes(i))).length; ctx.message(conflicts.length ? `Rule violated in ${conflicts.length} cells. No final answers revealed.` : `${done} rules satisfied; ${tileGroups(p).length - done} not yet decidable. No violations.`); }), button('Reset grid', () => { g.past.push([...g.board]); g.board = [...p.givens]; g.future = []; g.notes = {}; ctx.change(); }));
+        if (s.hard)
+            for (const b of controls.querySelectorAll('button'))
+                if (b.textContent === 'Check rules')
+                    b.disabled = true;
         parent.append(controls, button('Submit grid', ctx.submit, 'primary'));
     }
     else if (p.game === 'wordfossil') {

@@ -1,6 +1,7 @@
+import { migrateScores } from './daily-options.js';
 import { validatePuzzle } from './data.js';
 export const key = (game) => `foxhollow.${game}.v1`;
-export function empty() { return { version: 1, daily: {}, practice: null, records: [], attempted: [], recent: [], practiceSerial: 0, settings: { nameRule: false, theme: 'system', maxMistakes: 3 }, feedback: [] }; }
+export function empty() { return { version: 1, scoreVersion: 2, daily: {}, practice: null, records: [], attempted: [], recent: [], practiceSerial: 0, settings: { nameRule: false, theme: 'system', maxMistakes: 3 }, feedback: [] }; }
 const obj = (x) => typeof x === 'object' && x !== null && !Array.isArray(x);
 const strings = (x) => Array.isArray(x) && x.every(t => typeof t === 'string');
 const numeric = (x) => typeof x === 'number' && Number.isFinite(x) && x >= 0;
@@ -12,7 +13,7 @@ function validSession(x) {
             ['playing', 'naming', 'solved', 'failed'].includes(String(x.phase)) && strings(x.guesses) && x.guesses.length <= 5 &&
             numeric(x.hints) && Number.isInteger(x.hints) && x.hints <= 3 && numeric(x.score) && numeric(x.started) &&
             (x.finished === null || numeric(x.finished)) && (x.selected === null || typeof x.selected === 'string') &&
-            typeof x.nameRule === 'boolean' && (x.ruleAnswer === null || typeof x.ruleAnswer === 'string') && [3, 4, 5].includes(Number(x.maxMistakes)) &&
+            typeof x.nameRule === 'boolean' && (x.ruleAnswer === null || typeof x.ruleAnswer === 'string') && [2, 3, 4, 5].includes(Number(x.maxMistakes)) &&
             (x.puzzle.game === 'fourthword' || x.puzzle.game === 'oddrule') && validatePuzzle(x.puzzle).valid;
     }
     catch {
@@ -51,7 +52,7 @@ export function deserialize(raw) {
         }
         if (Array.isArray(x.feedback))
             d.feedback = x.feedback.filter((v) => obj(v) && typeof v.puzzleId === 'string' && typeof v.reason === 'string' && typeof v.created === 'string');
-        return d;
+        return migrateScores(d, x.scoreVersion);
     }
     catch {
         return empty();

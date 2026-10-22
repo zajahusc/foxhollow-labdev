@@ -1,6 +1,7 @@
+import { readHard, writeHard } from './daily-options.js';
 import { nextDailyReset } from './time.js';
 import { bank, validateBank } from './data.js';
-import { correct, nameRule, practicePuzzle, reveal, saveSession, session, share, statistics, submit, terminal, useHint, dailyDay } from './engine.js';
+import { correct, nameRule, reveal, saveSession, session, share, statistics, submit, terminal, useHint, dailyDay } from './engine.js';
 import { dailyPuzzle } from './schedule.js';
 import { empty, key, load, store } from './storage.js';
 const game = document.body.dataset.game === 'oddrule' ? 'oddrule' : 'fourthword';
@@ -34,7 +35,7 @@ try {
 catch {
     data = empty();
 }
-let mode = 'daily', current = null, filterLevel = 0, filterCategory = 'Any';
+let current = null;
 let dailyViewedDay = dailyDay();
 let notice = '', storageWarned = false, noticeTimeout;
 function notify(message) { toast.textContent = message; toast.classList.add('show'); clearTimeout(noticeTimeout); noticeTimeout = setTimeout(() => toast.classList.remove('show'), 5000); }
@@ -75,42 +76,9 @@ function getDaily() {
         current = null;
         return;
     }
-    current = session(p, 'daily', day, 0, data.settings.nameRule);
+    current = { ...session(p, 'daily', day, 0, data.settings.nameRule), hard: readHard(game), maxMistakes: readHard(game) ? 2 : 3 };
     data = saveSession(data, current);
     persist();
-}
-function startPractice(force = false) {
-    if (!force && current?.mode === 'practice' && !terminal(current) && (current.guesses.length > 0 || current.hints > 0)) {
-        confirm('Leave this practice puzzle?', 'Your unfinished puzzle will be counted as revealed, with zero points. Daily streaks are unaffected.', () => { if (current)
-            update(reveal(current)); startPractice(true); });
-        return;
-    }
-    try {
-        data.practiceSerial++;
-        const seed = `${game}:${data.practiceSerial}:${Date.now()}`;
-        const p = practicePuzzle(game, filterLevel, filterCategory, data.recent, seed);
-        current = session(p, 'practice', dailyDay(), data.practiceSerial, data.settings.nameRule, data.settings.maxMistakes);
-        data = saveSession(data, current);
-        persist();
-        notice = '';
-        render();
-    }
-    catch (e) {
-        notify(e instanceof Error ? e.message : 'Could not start a puzzle.');
-    }
-}
-function switchMode(next) {
-    if (mode === next)
-        return;
-    mode = next;
-    notice = '';
-    if (mode === 'daily')
-        getDaily();
-    else if (data.practice)
-        current = data.practice;
-    else
-        startPractice(true);
-    render();
 }
 function openModal(heading, content) {
     const old = document.activeElement;
@@ -136,7 +104,7 @@ function instructions() {
     const items = fourth ? [
         'Find the hidden relationship connecting three clues. Choose the fourth item that follows it.',
         'Select an option, then lock it in. Some number puzzles ask you to type an answer under an explicit sequence constraint.',
-        'You have three mistakes in Daily. Hints reveal progressively more of the relationship.'
+        'Normal allows three wrong answers and optional hints. Hard allows two wrong answers and no hints.'
     ] : [
         'Five of the six cards follow a hidden rule. Select the one that breaks it, then lock in your answer.',
         'The obvious category can be a decoy. A smaller spelling or numerical property may be the real rule.',
@@ -144,13 +112,20 @@ function instructions() {
     ];
     for (const t of items)
         list.append($('li', t));
-    openModal('A little way to play.', [list, $('h3', 'Every point explained'), $('p', 'Base score is 100 × difficulty level. Each wrong guess costs 15% of the original base. Hints cost 10%, 15%, then 20% of base. There is no time penalty, and scores stop at zero.'),
-        $('p', fourth ? 'A reveal or exhausted attempts scores zero.' : 'Correctly naming the rule adds 25% of base. A wrong rule choice costs 15% of base; you still complete the puzzle. Reveals score zero.'), $('h3', 'One day. One shared puzzle.'), $('p', 'Daily resets at midnight New York time. Everyone gets the same published assignment. Your first completed daily score is saved. Practice has separate progress and never changes your streak.'), $('p', 'Spelling rules count A, E, I, O and U as vowels; Y is a consonant. Word meanings do not determine the spelling puzzles. Answers and rules are checked against the published rule catalog, not every possible interpretation.')]);
+    openModal('A little way to play.', [list, $('h3', 'Every point explained'), $('p', 'Scores range from 0 to 100, with a base of 60 + 8 × difficulty level. Each wrong guess costs 15% of the original base. Hints cost 10%, 15%, then 20% of base. There is no time penalty, and scores stop at zero.'),
+        $('p', fourth ? 'A reveal or exhausted attempts scores zero.' : 'Correctly naming the rule can add up to 25% of base, capped at 100 total points. A wrong rule choice costs 15% of base; you still complete the puzzle. Reveals score zero.'), $('h3', 'One day. One shared puzzle.'), $('p', 'Daily resets at midnight New York time. Everyone gets the same published assignment. Your first completed daily score is saved. Hard mode uses the same puzzle with fewer attempts and no hints.'), $('p', 'Spelling rules count A, E, I, O and U as vowels; Y is a consonant. Word meanings do not determine the spelling puzzles. Answers and rules are checked against the published rule catalog, not every possible interpretation.')]);
 }
 function settings() {
     const theme = select('Color theme', [{ value: 'system', text: 'Follow device' }, { value: 'light', text: 'Light' }, { value: 'dark', text: 'Dark' }], data.settings.theme, v => { data.settings.theme = v; persist(); applyTheme(); });
-    const mistakes = select('Practice mistakes', [{ value: '3', text: '3 mistakes' }, { value: '4', text: '4 mistakes' }, { value: '5', text: '5 mistakes' }], String(data.settings.maxMistakes), v => { data.settings.maxMistakes = Number(v); persist(); });
-    const nodes = [label('Appearance', theme), label('Attempts in your next practice puzzle', mistakes), $('p', 'Daily always allows three mistakes. New settings apply to the next puzzle.', 'muted')];
+    const hard = select('Difficulty', [{ value: 'normal', text: 'Normal' }, { value: 'hard', text: 'Hard' }], readHard(game) ? 'hard' : 'normal', value => { writeHard(game, value === 'hard'); if (current?.phase === 'playing' && !current.guesses.length && !current.hints && !current.selected) {
+        current = { ...current, hard: value === 'hard', maxMistakes: value === 'hard' ? 2 : 3 };
+        data = saveSession(data, current);
+        persist();
+        render();
+    }
+    else
+        notify('Difficulty saved for your next daily. Today’s mode stays locked.'); });
+    const nodes = [label('Difficulty', hard), $('p', 'Normal: three wrong answers. Hard: two wrong answers and no hints. Choose before you start; later changes apply to your next daily.', 'muted'), label('Appearance', theme)];
     if (!fourth) {
         const toggle = $('input');
         toggle.type = 'checkbox';
@@ -165,11 +140,11 @@ function settings() {
             persist();
             render();
         };
-        nodes.push(label('Name the Rule · optional second step', toggle), $('p', 'Changes affect an untouched current puzzle or your next puzzle. A correct rule earns +25% of base.', 'muted'));
+        nodes.push(label('Name the Rule · optional second step', toggle), $('p', 'Changes affect an untouched current puzzle or your next puzzle. A correct rule can add a bonus, capped at 100 total points.', 'muted'));
     }
     if (data.feedback.length)
         nodes.push(button(`View saved puzzle notes (${data.feedback.length})`, showNotes, 'secondary'));
-    nodes.push($('h3', 'Your browser, your progress'), $('p', 'Scores stay in this browser on this device. They do not sync to other devices. Clearing site data removes them.'), button('Reset this game’s saved data', () => confirm('Delete all saved progress?', 'This removes this game’s scores, streak, active puzzles, settings and locally saved feedback. It cannot be undone.', () => { data = empty(); persist(); mode = 'daily'; notice = ''; getDaily(); applyTheme(); render(); notify('Saved progress cleared.'); }), 'text-button danger'));
+    nodes.push($('h3', 'Your browser, your progress'), $('p', 'Scores stay in this browser on this device. They do not sync to other devices. Clearing site data removes them.'), button('Reset this game’s saved data', () => confirm('Delete all saved progress?', 'This removes this game’s scores, streak, active puzzles, settings and locally saved feedback. It cannot be undone.', () => { data = empty(); persist(); notice = ''; getDaily(); applyTheme(); render(); notify('Saved progress cleared.'); }), 'text-button danger'));
     openModal('Make it your own.', nodes);
 }
 function showNotes() {
@@ -212,7 +187,7 @@ function nextCountdown() {
     el.textContent = `Next daily in ${h}:${m}:${s} · midnight New York time`;
 }
 function rollover() {
-    if (mode === 'daily' && dailyViewedDay !== dailyDay()) {
+    if (dailyViewedDay !== dailyDay()) {
         const wasActive = current && !terminal(current);
         notice = wasActive ? 'A new day in New York has begun. Your unfinished prior-day progress remains saved; this is today’s puzzle.' : 'A fresh daily puzzle is ready.';
         getDaily();
@@ -224,7 +199,7 @@ function lock(answer) {
         return;
     const originalDay = current.day;
     rollover();
-    if (!current || mode === 'daily' && current.day !== originalDay) {
+    if (!current || current.day !== originalDay) {
         notify('A new daily puzzle has started. Please choose again.');
         return;
     }
@@ -317,7 +292,7 @@ function renderPlaying(s, board) {
         notice = '';
         update(useHint(current));
     } }, 'secondary');
-    hint.disabled = s.hints >= 3;
+    hint.disabled = Boolean(s.hard) || s.hints >= 3;
     helper.append(hint, button('Reveal answer', () => confirm('Reveal this puzzle?', 'The explanation will be shown and this attempt will earn zero points.', () => { if (current)
         update(reveal(current)); focusAfterAnswer(); }), 'text-button'));
     board.append(helper);
@@ -380,36 +355,39 @@ function feedback(s) {
     openModal('Keep a puzzle note.', [label('What felt off?', reason), text, $('p', 'This note is saved only in this browser. It is not sent to Foxhollow Labs. You can copy it to share separately.', 'muted'), button('Save note on this device', () => { data.feedback.push({ puzzleId: s.puzzle.id, reason: reason.value + (text.value ? ': ' + text.value : ''), created: new Date().toISOString() }); persist(); dialog.close(); notify('Note saved on this device.'); }, 'primary')]);
 }
 function renderResult(s, board) {
-    const won = s.phase === 'solved', h = $('h2', won ? 'A little discovery.' : 'Now it connects.', 'result-title');
+    const won = s.phase === 'solved', h = $('h2', won ? 'Correct! You solved it.' : 'Today’s answer.', 'result-title');
     h.tabIndex = -1;
     h.id = 'result-heading';
     const top = $('div', '', 'result-top');
     top.append($('span', won ? '◆ SOLVED' : '◇ REVEALED', 'eyebrow'), $('strong', `${s.score} pts`, 'result-score'));
     board.append(top, h);
+    const details = $('details', '', 'solution-details');
+    details.append($('summary', 'How it works'));
+    board.append(details);
     if (s.puzzle.game === 'fourthword') {
         const row = $('div', '', 'solution-row');
         for (const value of [...s.puzzle.clues, s.puzzle.answer])
             row.append($('span', value, value === s.puzzle.answer ? 'solution-answer' : ''));
-        board.append(row);
+        details.append(row);
     }
     else {
         const matches = $('div', '', 'matching-items');
         for (const value of s.puzzle.items.filter(x => x !== s.puzzle.answer))
             matches.append($('span', `✓ ${value}`));
-        board.append(matches, $('p', `The odd one: ${s.puzzle.answer}`, 'outsider'));
+        details.append(matches, $('p', `The odd one: ${s.puzzle.answer}`, 'outsider'));
     }
-    board.append($('h3', s.puzzle.relationship, 'relationship'), $('p', s.puzzle.explanation));
+    details.append($('h3', s.puzzle.relationship, 'relationship'), $('p', s.puzzle.explanation));
     const evidence = $('ul', '', 'evidence');
     for (const detail of s.puzzle.evidence)
         evidence.append($('li', detail));
-    board.append(evidence);
+    details.append(evidence);
     if (s.puzzle.game === 'oddrule')
-        board.append($('p', `The decoy: ${s.puzzle.decoy}`, 'decoy'));
+        details.append($('p', `The decoy: ${s.puzzle.decoy}`, 'decoy'));
     if (s.ruleAnswer)
-        board.append($('p', s.ruleAnswer === s.puzzle.relationship ? '✓ Rule named correctly · 25% base bonus earned.' : 'Your rule choice did not match. This solve includes the 15% base penalty.', 'bonus-note'));
-    board.append($('p', `${s.guesses.length} ${s.guesses.length === 1 ? 'guess' : 'guesses'} · ${s.hints} hints · Base ${s.puzzle.level * 100} points. All penalties use the original base.`, 'muted'));
+        details.append($('p', s.ruleAnswer === s.puzzle.relationship ? '✓ Rule named correctly · bonus applied, capped at 100 points.' : 'Your rule choice did not match. This solve includes the 15% base penalty.', 'bonus-note'));
+    details.append($('p', `${s.guesses.length} ${s.guesses.length === 1 ? 'guess' : 'guesses'} · ${s.hints} hints · Base ${60 + s.puzzle.level * 8} points. All penalties use the original base.`, 'muted'));
     const actions = $('div', '', 'actions');
-    actions.append(button('Share result ↗', () => { void shareResult(s); }, 'primary'), button('Play another', () => { mode = 'practice'; startPractice(true); }, 'secondary'));
+    actions.append(button('Share result ↗', () => { void shareResult(s); }, 'primary'), link('Explore more daily games ↗', '/games/', 'secondary'));
     board.append(actions);
     const extras = $('div', '', 'result-extras');
     extras.append(button('Share with answer', () => confirm('Include the answer?', 'This version will reveal the puzzle’s answer and relationship to anyone you share it with.', () => { void shareResult(s, true); }), 'text-button'), button('Puzzle feedback', () => feedback(s), 'text-button'));
@@ -433,26 +411,11 @@ function render() {
     mark.setAttribute('aria-hidden', 'true');
     hero.append($('p', 'A FOXHOLLOW DAILY PUZZLE', 'eyebrow'), mark, $('h1', title), $('p', fourth ? 'Three belong together. What’s the fourth?' : 'Find the rule. Break the pattern.', 'tagline'));
     content.append(hero);
-    const tabs = $('nav', '', 'mode-tabs');
-    tabs.setAttribute('aria-label', 'Play mode');
-    for (const m of ['daily', 'practice']) {
-        const b = button(m === 'daily' ? 'Daily challenge' : 'Unlimited practice', () => switchMode(m), m === mode ? 'active' : '');
-        b.setAttribute('aria-current', m === mode ? 'page' : 'false');
-        tabs.append(b);
-    }
-    content.append(tabs);
-    if (mode === 'practice') {
-        const filters = $('div', '', 'practice-filters');
-        const diff = select('Practice difficulty', [{ value: '0', text: 'Any difficulty' }, ...levels.map((text, i) => ({ value: String(i + 1), text }))], String(filterLevel), v => { filterLevel = Number(v); });
-        const cat = select('Practice category', [{ value: 'Any', text: 'Any category' }, { value: 'Language', text: 'Language' }, { value: 'Structure', text: 'Structure' }, { value: 'Numbers', text: 'Numbers' }], filterCategory, v => { filterCategory = v; });
-        filters.append(diff, cat, button('New puzzle ↗', () => startPractice(), 'secondary'));
-        content.append(filters, $('p', 'Language and Structure revisit their collection after you have explored it. Numbers offers freshly generated puzzles.', 'practice-note muted'));
-    }
     const board = $('section', '', 'board');
     board.setAttribute('aria-label', 'Puzzle');
     if (current) {
-        const edition = $('div', '', 'edition'), left = $('span', current.mode === 'daily' ? `DAILY / ${current.day}` : 'PRACTICE / NO STREAK PRESSURE');
-        edition.append(left, $('span', `${levels[current.puzzle.level - 1]} · ${current.puzzle.category}`, 'difficulty'));
+        const edition = $('div', '', 'edition'), left = $('span', `DAILY / ${current.day}`);
+        edition.append(left, $('span', `${current.hard ? 'HARD' : 'NORMAL'} · ${current.puzzle.category}`, 'difficulty'));
         board.append(edition);
         if (current.phase === 'playing')
             renderPlaying(current, board);
@@ -462,7 +425,7 @@ function render() {
             renderResult(current, board);
     }
     else {
-        board.append($('h2', 'The next chapter is being prepared.'), $('p', 'There is no published daily assignment for this New York date. Unlimited practice is available.'), button('Play practice', () => switchMode('practice'), 'primary'));
+        board.append($('h2', 'The next chapter is being prepared.'), $('p', 'There is no published daily assignment for this New York date. Please check back tomorrow.'));
     }
     content.append(board);
     const foot = $('footer', '', 'game-footer'), count = $('p', '', 'countdown');
@@ -488,10 +451,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden)
     rollover(); });
 window.addEventListener('storage', event => { if (event.key === key(game)) {
     sync();
-    if (mode === 'daily')
-        getDaily();
-    else
-        current = data.practice;
+    getDaily();
     notice = 'Progress updated from another tab.';
     render();
 } });

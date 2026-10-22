@@ -30,10 +30,10 @@ export type Puzzle = FourthPuzzle | OddPuzzle;
 export type Mode = 'daily' | 'practice';
 export type Phase = 'playing' | 'naming' | 'solved' | 'failed';
 export interface Session {
-  key: string; puzzle: Puzzle; mode: Mode; day: string; phase: Phase;
+  hard?: boolean; key: string; puzzle: Puzzle; mode: Mode; day: string; phase: Phase;
   guesses: string[]; hints: number; selected: string | null;
   nameRule: boolean; ruleAnswer: string | null; score: number;
-  maxMistakes: 3 | 4 | 5; started: number; finished: number | null;
+  maxMistakes: 2 | 3 | 4 | 5; started: number; finished: number | null;
 }
 export interface RecordEntry {
   key: string; puzzleId: string; mode: Mode; day: string; level: Level;
@@ -42,7 +42,7 @@ export interface RecordEntry {
 }
 export interface Settings { nameRule: boolean; theme: 'system' | 'light' | 'dark'; maxMistakes: 3 | 4 | 5 }
 export interface SavedData {
-  version: 1; daily: { [day: string]: Session }; practice: Session | null;
+  scoreVersion?:2; version: 1; daily: { [day: string]: Session }; practice: Session | null;
   records: RecordEntry[]; attempted: string[]; recent: string[];
   settings: Settings; practiceSerial: number;
   feedback: { puzzleId: string; reason: string; created: string }[];

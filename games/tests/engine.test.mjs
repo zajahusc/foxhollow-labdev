@@ -28,8 +28,8 @@ test('wrong selection, duplicate guess, hint, solution and persistence journey',
  assert.deepEqual(deserialize(JSON.stringify(d)),d);
 });
 test('scores always use original base; hint increments, bonus, reveal, minimum',()=>{
- assert.equal(score(4,1,1,true),300);assert.equal(score(4,2,2,true),180);assert.equal(score(4,2,3,true),100);
- assert.equal(score(5,0,0,true,true),625);assert.equal(score(5,0,0,false,true),0);assert.equal(score(1,10,3,true),0);
+ assert.equal(score(4,1,1,true),69);assert.equal(score(4,2,2,true),41);assert.equal(score(4,2,3,true),23);
+ assert.equal(score(5,0,0,true,true),100);assert.equal(score(5,0,0,false,true),0);assert.equal(score(1,10,3,true),0);
  let s=start();for(let i=0;i<6;i++)s=useHint(s);assert.equal(s.hints,3);
 });
 test('three wrong answers exhaust attempts and remain terminal',()=>{
@@ -89,9 +89,9 @@ test('statistics track attempts, failures and difficulty; only daily wins affect
  let d=empty();
  for(let i=0;i<3;i++){let s=session(fourth,'daily',`2026-10-${19+i}`,i,false);s=submit(s,fourth.answer);d=saveSession(d,s);}
  d=saveSession(d,reveal(session(fourth,'practice','2026-10-21',22,false)));
- const stats=statistics(d,'2026-10-21');assert.equal(stats.streak,3);assert.equal(stats.longest,3);assert.equal(stats.winRate,75);assert.equal(stats.attempted,4);assert.equal(stats.completed,4);
+ const stats=statistics(d,'2026-10-21');assert.equal(stats.streak,3);assert.equal(stats.longest,3);assert.equal(stats.winRate,100);assert.equal(stats.attempted,3);assert.equal(stats.completed,3);
  assert.equal(statistics(d,'2026-10-22').streak,3);assert.equal(statistics(d,'2026-10-23').streak,0);
- const active=session(fourth,'practice','2026-10-21',23,false);d=saveSession(d,active);assert.equal(statistics(d).attempted,5);assert.equal(statistics(d).completed,4);
+ const active=session(fourth,'practice','2026-10-21',23,false);d=saveSession(d,active);assert.equal(statistics(d).attempted,3);assert.equal(statistics(d).completed,3);
 });
 test('daily and practice persist independently, including mid-rule and selected cards',()=>{
  let d=empty();const daily={...start(),selected:fourth.answer};d=saveSession(d,daily);

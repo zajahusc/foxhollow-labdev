@@ -35,7 +35,7 @@ test('Gravity: unsupported and duplicate guesses are free; wrong→hint→solve 
  const t=gravityTargets[0],r=rank(trained,t);let s=initial('semanticgravity',t.id,t.level,'daily',0);
  assert.equal(gravityGuess(s,t,r,'notawordzzzzz').session,s);
  const wrong=r.ordered[100];s=gravityGuess(s,t,r,wrong).session;assert.equal(s.mistakes,1);assert.equal(gravityGuess(s,t,r,wrong).session,s);
- for(let n=0;n<3;n++)s=gravityHint(s);s=gravityGuess(s,t,r,t.word).session;assert.equal(s.phase,'solved');assert.equal(s.score,530);assert.equal(temperature(1,6028),'Found');assert.equal(temperature(6000,6028),'Cold');
+ for(let n=0;n<3;n++)s=gravityHint(s);s=gravityGuess(s,t,r,t.word).session;assert.equal(s.phase,'solved');assert.equal(s.score,53);assert.equal(temperature(1,6028),'Found');assert.equal(temperature(6000,6028),'Cold');
  assert.equal(normalizeGuess('  HARBOR  ',trained.index),'harbour');
 });
 test('Gravity: daily limits fail at the configured boundary, practice remains unlimited',()=>{
@@ -70,7 +70,7 @@ test('Weave: inventory counts have exact multiplicities and reject extra tiles',
 });
 test('Weave: scoring, incorrect submission, hint penalties and minimum score are exact',()=>{
  const p=weaveBank[0];let s=initial('wordweave',p.id,1,'practice',1,p);assert.ok(submitWeave(s).issues.length);assert.equal(submitWeave(s).session.mistakes,1);
- s={...s,letters:p.solution};assert.equal(submitWeave(s).session.score,360);s={...s,hints:3,hintsByType:[1,1,1],mistakes:1};assert.equal(weaveScore(s),180);
+ s={...s,letters:p.solution};assert.equal(submitWeave(s).session.score,100);s={...s,hints:3,hintsByType:[1,1,1],mistakes:1};assert.equal(weaveScore(s),60);
  assert.equal(weaveScore({...s,hintsByType:[50,50,50]}),0);
 });
 test('Weave: deterministic generator produces proven grids and supported mode policies',()=>{

@@ -19,3 +19,5 @@ The collection also includes [Semantic Gravity](/semanticgravity/) and [Word Wea
 Word Weave now uses blank, numbered mini-crosswords with Across/Down clues and irregular rectangular layouts. WordBridge uses the shared collection UI while retaining its original game logic and saves. [Current UX update](games/UX-UPDATE.md).
 
 The collection also includes eight new daily games: Lexicon Lock, The Alibi, The Missing Move, Tile Theory, Word Fossil, Negative Logic, Paradox Box and Line by Line. See [game documentation](games/EIGHT-GAMES.md) for mechanics, sources, actual content counts and validation. All daily games reset at midnight New York time.
+
+All thirteen games are now daily-only, with Normal/Hard in Settings, scores capped at 100 and unique light/dark colors. See [Daily-only update](games/DAILY-ONLY.md).

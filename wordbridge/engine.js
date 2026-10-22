@@ -4,7 +4,7 @@ export function dailyKey(date = new Date()) {
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 export function points(par, count, hard, assisted) {
-  return assisted || par < 3 || par > 10 || count < par ? 0 : (100 + 10 * par + Math.max(0, 50 - 10 * (count - par))) * (hard ? 2 : 1);
+  return assisted || par < 3 || par > 10 || count < par ? 0 : Math.max(0, 100 - 5 * (count - par));
 }
 export function createGraph(data) {
   const indices = new Map(data.words.map((w,i) => [w,i]));

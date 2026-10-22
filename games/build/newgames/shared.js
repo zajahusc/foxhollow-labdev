@@ -1,10 +1,11 @@
+import { migrateScores } from '../daily-options.js';
 import { dailyDay, previousDay } from '../engine.js';
 import { hash, normalize, shuffle } from '../data.js';
 export { dailyDay, previousDay, normalize, shuffle };
 export const names = { semanticgravity: 'Semantic Gravity', wordweave: 'Word Weave' };
 export const levels = ['Easy', 'Normal', 'Hard', 'Expert', 'Master'];
 export const storageKey = (game) => `foxhollow.${game}.v1`;
-export function blankSave() { return { version: 1, daily: {}, practice: null, records: [], attempted: [], recent: [], serial: 0, theme: 'system', dailyLimit: null, feedback: [] }; }
+export function blankSave() { return { version: 1, scoreVersion: 2, daily: {}, practice: null, records: [], attempted: [], recent: [], serial: 0, theme: 'system', dailyLimit: null, feedback: [] }; }
 export function initial(game, id, level, mode, serial, puzzle, limit = null) {
     const day = dailyDay(), base = { key: mode === 'daily' ? `daily:${day}` : `practice:${serial}`, game, mode, day, level, phase: 'playing', started: Date.now(), finished: null, score: 0, guesses: [], mistakes: 0, hints: 0 };
     if (game === 'semanticgravity')
@@ -56,7 +57,7 @@ export function decode(raw, game) {
             d.dailyLimit = v.dailyLimit;
         if (Array.isArray(v.feedback))
             d.feedback = v.feedback.filter((x) => object(x) && typeof x.puzzleId === 'string' && typeof x.guess === 'string' && typeof x.date === 'string');
-        return d;
+        return migrateScores(d, v.scoreVersion);
     }
     catch {
         return blankSave();
@@ -72,7 +73,8 @@ export function commit(d, s) {
     return { ...d, daily: s.mode === 'daily' ? { ...d.daily, [s.day]: s } : d.daily, practice: s.mode === 'practice' ? s : d.practice, records, attempted: d.attempted.includes(s.key) ? d.attempted : [...d.attempted, s.key], recent: done ? [puzzleId(s), ...(s.game === 'wordweave' ? ['grid-' + hash(s.puzzle.layout + '|' + s.puzzle.solution)] : []), ...d.recent.filter(id => id !== puzzleId(s))].slice(0, 200) : d.recent };
 }
 export function statistics(d, today = dailyDay()) {
-    const wins = d.records.filter(r => r.won), days = [...new Set(wins.filter(r => r.mode === 'daily').map(r => r.day))].sort();
+    const records = d.records.filter(r => r.mode === 'daily');
+    const wins = records.filter(r => r.won), days = [...new Set(wins.filter(r => r.mode === 'daily').map(r => r.day))].sort();
     let longest = 0, run = 0, prev = '';
     for (const day of days) {
         run = previousDay(day) === prev ? run + 1 : 1;
@@ -84,8 +86,8 @@ export function statistics(d, today = dailyDay()) {
         streak++;
         day = previousDay(day);
     }
-    const total = d.records.reduce((n, r) => n + r.score, 0);
-    return { attempted: d.attempted.length, finished: d.records.length, wins: wins.length, winRate: d.records.length ? Math.round(100 * wins.length / d.records.length) : 0, streak, longest, total, best: Math.max(0, ...d.records.map(x => x.score)), average: d.records.length ? Math.round(total / d.records.length) : 0 };
+    const total = records.reduce((n, r) => n + r.score, 0);
+    return { attempted: d.attempted.filter(k => k.startsWith('daily:')).length, finished: records.length, wins: wins.length, winRate: records.length ? Math.round(100 * wins.length / records.length) : 0, streak, longest, total, best: Math.max(0, ...records.map(x => x.score)), average: records.length ? Math.round(total / records.length) : 0 };
 }
 export function giveUp(s) { return s.phase !== 'playing' ? s : { ...s, phase: 'failed', score: 0, finished: Date.now() }; }
 export function resultText(s) { return `${names[s.game].toUpperCase()} · ${s.mode === 'daily' ? s.day : 'Practice'}\n${levels[s.level - 1]} · ${s.phase === 'solved' ? 'Solved ◆' : 'Revealed ◇'}\nScore: ${s.score} · Hints: ${s.hints} · ${s.game === 'wordweave' ? `Incorrect submissions: ${s.mistakes}` : `Guesses: ${s.guesses.length}`}\nhttps://foxhollowlabs.dev/${s.game}/`; }

@@ -47,6 +47,7 @@ export interface WeavePuzzle {
     estimated: true;
 }
 interface Base {
+    hard?: boolean;
     key: string;
     game: NewGame;
     mode: 'daily' | 'practice';
@@ -102,6 +103,7 @@ export interface Result {
     seconds: number;
 }
 export interface Save {
+    scoreVersion?: 2;
     version: 1;
     daily: Record<string, NewSession>;
     practice: NewSession | null;

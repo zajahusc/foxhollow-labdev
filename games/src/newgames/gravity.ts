@@ -32,11 +32,11 @@ export function gravityGuess(s:GravitySession,t:GravityTarget,r:Ranking,raw:stri
  if(!position)return {session:s,message:'That word is outside the supported vocabulary. No attempt used.'};
  if(s.guesses.includes(word))return {session:s,message:'Already tried. No attempt used.'};
  const won=word===t.word,guesses=[...s.guesses,word],failed=!won&&s.limit!==null&&guesses.length>=s.limit;
- const cost=[0,100,250,450][s.hints]!;
+ const cost=[0,10,25,45][s.hints]!;
  const oldBest=Math.min(Infinity,...s.ranks.map(x=>x.rank));
- return {session:{...s,guesses,ranks:[...s.ranks,{word,rank:position}],mistakes:s.mistakes+(won?0:1),phase:won?'solved':failed?'failed':'playing',finished:won||failed?Date.now():null,score:failed?0:Math.max(0,1000-(s.mistakes+(won?0:1))*20-cost)},message:`${word}: rank #${position} of ${r.ordered.length}. ${temperature(position,r.ordered.length)}.${position<oldBest&&Number.isFinite(oldBest)?` Improved by ${oldBest-position} places.`:''}`};
+ return {session:{...s,guesses,ranks:[...s.ranks,{word,rank:position}],mistakes:s.mistakes+(won?0:1),phase:won?'solved':failed?'failed':'playing',finished:won||failed?Date.now():null,score:failed?0:Math.max(0,100-(s.mistakes+(won?0:1))*2-cost)},message:`${word}: rank #${position} of ${r.ordered.length}. ${temperature(position,r.ordered.length)}.${position<oldBest&&Number.isFinite(oldBest)?` Improved by ${oldBest-position} places.`:''}`};
 }
-export function gravityHint(s:GravitySession):GravitySession{return s.phase==='playing'&&s.hints<3?{...s,hints:s.hints+1}:s;}
+export function gravityHint(s:GravitySession):GravitySession{return s.phase==='playing'&&!s.hard&&s.hints<3?{...s,hints:s.hints+1}:s;}
 export function neighborHints(t:GravityTarget,r:Ranking):[string,string]{
  const a=r.ordered[t.hintRanks[0]-1],b=r.ordered[t.hintRanks[1]-1];if(!a||!b||a===t.word||b===t.word||a===b)throw Error('Invalid semantic hints');return [a,b];
 }

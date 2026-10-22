@@ -6,7 +6,7 @@ export function score(level, mistakes, hints, won, ruleNamed = false) {
     if (!won)
         return 0;
     const hintPenalty = [0, .1, .25, .45][Math.max(0, Math.min(3, hints))];
-    return Math.max(0, Math.round(level * 100 * (1 - .15 * Math.max(0, mistakes) - hintPenalty + (ruleNamed ? .25 : 0))));
+    return Math.min(100, Math.max(0, Math.round(Math.min(100, 60 + level * 8) * (1 - .15 * Math.max(0, mistakes) - hintPenalty + (ruleNamed ? .25 : 0)))));
 }
 export function session(puzzle, mode, day, serial, nameRule, maxMistakes = 3) {
     const v = validatePuzzle(puzzle);
@@ -35,7 +35,7 @@ export function submit(current, answer) {
         return finish(next, false);
     return next;
 }
-export function useHint(s) { return s.phase === 'playing' && s.hints < 3 ? { ...s, hints: s.hints + 1 } : s; }
+export function useHint(s) { return s.phase === 'playing' && !s.hard && s.hints < 3 ? { ...s, hints: s.hints + 1 } : s; }
 export function nameRule(s, answer) {
     if (s.phase !== 'naming' || s.puzzle.game !== 'oddrule' || !s.puzzle.ruleChoices.includes(answer))
         return s;
@@ -64,7 +64,7 @@ export function saveSession(data, s) {
         recent: terminal(s) ? [s.puzzle.id, ...data.recent.filter(id => id !== s.puzzle.id)].slice(0, 100) : data.recent };
 }
 export function statistics(data, today = dailyDay()) {
-    const r = data.records, wins = r.filter(x => x.won), days = [...new Set(wins.filter(x => x.mode === 'daily').map(x => x.day))].sort();
+    const r = data.records.filter(x => x.mode === 'daily'), wins = r.filter(x => x.won), days = [...new Set(wins.filter(x => x.mode === 'daily').map(x => x.day))].sort();
     let longest = 0, run = 0, previous = '';
     for (const day of days) {
         run = previousDay(day) === previous ? run + 1 : 1;
@@ -77,7 +77,7 @@ export function statistics(data, today = dailyDay()) {
         day = previousDay(day);
     }
     const points = r.reduce((n, x) => n + x.score, 0), avg = (f) => r.length ? r.reduce((n, x) => n + f(x), 0) / r.length : 0;
-    return { attempted: data.attempted.length, completed: r.length, winRate: r.length ? wins.length / r.length * 100 : 0, streak, longest,
+    return { attempted: data.attempted.filter(k => k.startsWith('daily:')).length, completed: r.length, winRate: r.length ? wins.length / r.length * 100 : 0, streak, longest,
         averageGuesses: avg(x => x.guesses), averageHints: avg(x => x.hints), totalPoints: points, averageScore: avg(x => x.score), best: Math.max(0, ...r.map(x => x.score)),
         byLevel: [1, 2, 3, 4, 5].map(level => ({ level, played: r.filter(x => x.level === level).length, wins: wins.filter(x => x.level === level).length, points: r.filter(x => x.level === level).reduce((n, x) => n + x.score, 0) })) };
 }

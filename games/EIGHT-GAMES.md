@@ -1,3 +1,5 @@
+> Current experience: all games are daily-only. See [Daily-only update](DAILY-ONLY.md) for Settings Hard mode, compact scoring and the current UI. Practice references below describe the earlier release and retained engine/archive support.
+
 # Eight more ways to think
 
 These games extend the existing static TypeScript collection at foxhollowlabs.dev. No account, paid API, frontend runtime, external font or server database is needed. Existing game engines and storage keys are retained. Word Orbit remains retired.

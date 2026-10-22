@@ -1,3 +1,5 @@
+> Current experience: all games are daily-only. See [Daily-only update](DAILY-ONLY.md) for Settings Hard mode, compact scoring and the current UI. Practice references below describe the earlier release and retained engine/archive support.
+
 # Foxhollow daily games
 
 The Fourth Thing lives at `/fourthword/`; The Odd Rule at `/oddrule/`. `/games/` is the collection page. These are static applications for the repository's existing GitHub Pages deployment. WordBridge stays independent.

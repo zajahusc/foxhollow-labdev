@@ -29,6 +29,7 @@ export interface Progress {
     selected: number;
 }
 export interface Session {
+    hard?: boolean;
     puzzle: Puzzle;
     mode: 'daily' | 'practice';
     day: string;
@@ -57,6 +58,7 @@ export interface Result {
     category: string;
 }
 export interface Save {
+    scoreVersion?: 2;
     version: 1;
     game: Game;
     daily: Record<string, Session>;

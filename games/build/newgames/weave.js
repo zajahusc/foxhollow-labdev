@@ -253,15 +253,17 @@ export function editCell(s, cell, raw) {
 }
 export function undo(s) { const before = s.past.at(-1); return s.phase === 'playing' && before ? { ...s, ...before, past: s.past.slice(0, -1), future: [{ letters: s.letters, notes: s.notes }, ...s.future] } : s; }
 export function redo(s) { const after = s.future[0]; return s.phase === 'playing' && after ? { ...s, ...after, past: [...s.past, { letters: s.letters, notes: s.notes }], future: s.future.slice(1) } : s; }
-export function weaveScore(s) { const base = [300, 500, 750, 1000, 1500][s.level - 1]; return Math.max(0, Math.round(base * (1 - s.hintsByType[0] * .05 - s.hintsByType[1] * .1 - s.hintsByType[2] * .2 - s.mistakes * .05 + (!s.hints ? .1 : 0) + (!s.mistakes ? .1 : 0)))); }
+export function weaveScore(s) { return Math.max(0, Math.round(100 * (1 - s.hintsByType[0] * .05 - s.hintsByType[1] * .1 - s.hintsByType[2] * .2 - s.mistakes * .05))); }
 export function submitWeave(s) {
     if (s.phase !== 'playing')
         return { session: s, issues: [] };
     const issues = checkGrid(s.puzzle, s.letters);
     if (!issues.length && s.puzzle.unique && s.letters !== s.puzzle.solution)
         issues.push('This grid does not meet the published unique solution.');
-    if (issues.length)
-        return { session: { ...s, mistakes: s.mistakes + 1 }, issues };
+    if (issues.length) {
+        const mistakes = s.mistakes + 1, failed = mistakes >= (s.hard ? 3 : 8);
+        return { session: { ...s, mistakes, phase: failed ? 'failed' : 'playing', score: 0, finished: failed ? Date.now() : null }, issues };
+    }
     return { session: { ...s, phase: 'solved', score: weaveScore(s), finished: Date.now() }, issues: [] };
 }
 export const dictionaryCandidates = (pattern) => [...candidates(pattern)];

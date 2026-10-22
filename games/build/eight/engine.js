@@ -1,3 +1,4 @@
+import { migrateScores } from '../daily-options.js';
 import { dailyDay, previousDay } from '../time.js';
 import { catalog, hash, normalized } from './common.js';
 import { lockAnswer, validateLock, clueText } from './lexicon.js';
@@ -9,7 +10,7 @@ import { fossilAnswer, validateFossil } from './fossil.js';
 import { paradoxAnswer, validateParadox } from './paradox.js';
 import { landmarkAnswer, strokeScore, validateLine } from './lines.js';
 export const storageKey = (game) => `foxhollow.${game}.v1`;
-export const blankSave = (game) => ({ version: 1, game, daily: {}, practice: null, records: [], recent: [], serial: 0, theme: 'system', animation: true, hintOrder: 'geography', continuous: false });
+export const blankSave = (game) => ({ version: 1, scoreVersion: 2, game, daily: {}, practice: null, records: [], recent: [], serial: 0, theme: 'system', animation: true, hintOrder: 'geography', continuous: false });
 export function initial(puzzle, mode, serial = 0, day = dailyDay()) {
     const progress = { text: '', checked: [], notes: {}, order: puzzle.game === 'alibi' ? puzzle.names.map((_, i) => i) : puzzle.game === 'wordfossil' && puzzle.mode === 'evolution' ? [1, 2, 0] : [], liar: -1, badge: 0, board: puzzle.game === 'missingmove' ? [...puzzle.before] : puzzle.game === 'tiletheory' ? [...puzzle.givens] : [], past: [], future: [], movePath: [], eliminated: [], possible: [], choice: -1, clues: 1, strokes: 0, choicesShown: puzzle.level <= 2, pencil: false, selected: 0 };
     return { puzzle, mode, day, serial, phase: 'playing', progress, mistakes: 0, hints: 0, hintTexts: [], started: Date.now(), finished: null, score: 0 };
@@ -48,19 +49,16 @@ export function correct(s) { const p = s.puzzle, g = s.progress; switch (p.game)
     case 'linebyline': return landmarkAnswer(p, g.text);
 } }
 export function points(s) { if (s.phase !== 'solved')
-    return 0; const p = s.puzzle; switch (p.game) {
-    case 'lexiconlock': return Math.max(0, 500 - 50 * s.mistakes - 75 * s.hints + (s.mistakes === 0 ? 100 : 0));
-    case 'linebyline': return strokeScore(s.progress.strokes, p.total, s.mistakes, s.hints);
-    case 'missingmove': return Math.max(0, 700 - 40 * s.mistakes - 75 * s.hints - 40 * Math.max(0, s.progress.movePath.length - p.optimal));
-    case 'negativelogic': return Math.max(0, 600 - 50 * s.mistakes - 75 * s.hints - 30 * (s.progress.clues - 1) + Math.min(100, s.progress.eliminated.filter(x => x !== p.target).length * 10));
-    case 'wordfossil': return Math.max(0, 700 - 50 * s.mistakes - 100 * s.hints - (p.mode === 'detective' ? 30 * (s.progress.clues - 1) : 0));
-    default: return Math.max(0, 600 + p.level * 40 - 50 * s.mistakes - 75 * s.hints);
-} }
+    return 0; const p = s.puzzle; if (p.game === 'linebyline')
+    return strokeScore(s.progress.strokes, p.total, s.mistakes, s.hints); let value = 100 - 10 * s.mistakes - 10 * s.hints; if (p.game === 'missingmove')
+    value -= 5 * Math.max(0, s.progress.movePath.length - p.optimal); if (p.game === 'wordfossil' && p.mode === 'detective')
+    value -= 3 * (s.progress.clues - 1); if (p.game === 'negativelogic')
+    value -= 3 * (s.progress.clues - 1); return Math.max(0, Math.min(100, value)); }
 export function submit(s) { if (s.phase !== 'playing')
     return s; if (correct(s)) {
     const next = { ...s, phase: 'solved', finished: Date.now() };
     return { ...next, score: points(next) };
-} const mistakes = s.mistakes + 1; return { ...s, mistakes, phase: mistakes >= 8 ? 'lost' : 'playing', finished: mistakes >= 8 ? Date.now() : null }; }
+} const mistakes = s.mistakes + 1, limit = s.hard ? 3 : 8; return { ...s, mistakes, phase: mistakes >= limit ? 'lost' : 'playing', finished: mistakes >= limit ? Date.now() : null }; }
 export const reveal = (s) => s.phase === 'playing' ? { ...s, phase: 'revealed', score: 0, finished: Date.now() } : s;
 export function hintText(s, order = 'geography') {
     const p = s.puzzle, i = s.hints, g = s.progress;
@@ -86,7 +84,7 @@ export function hintText(s, order = 'geography') {
         case 'linebyline': return (order === 'geography' ? [`Continent: ${p.continent}.`, `Category: ${p.category}.`, `Country: ${p.country}.`] : [`Category: ${p.category}.`, `Continent: ${p.continent}.`, `Country: ${p.country}.`])[i];
     }
 }
-export function useHint(s, order = 'geography') { if (s.phase !== 'playing' || s.hints >= 3)
+export function useHint(s, order = 'geography') { if (s.phase !== 'playing' || s.hard || s.hints >= 3)
     return s; return { ...s, hints: s.hints + 1, hintTexts: [...s.hintTexts, hintText(s, order)] }; }
 export function explanation(p) { switch (p.game) {
     case 'lexiconlock': return [`The word is ${p.word.toUpperCase()}.`, ...p.clues.map(clueText), 'All clues together identify exactly one eligible dictionary word.'];
@@ -116,7 +114,7 @@ export function commit(save, s) {
     return next;
 }
 export function statistics(save, today = dailyDay()) {
-    const records = save.records, wins = records.filter(r => r.won), days = [...new Set(wins.filter(r => r.mode === 'daily').map(r => r.day))].sort();
+    const records = save.records.filter(r => r.mode === 'daily'), wins = records.filter(r => r.won), days = [...new Set(wins.filter(r => r.mode === 'daily').map(r => r.day))].sort();
     let longest = 0, run = 0, last = '';
     for (const day of days) {
         run = previousDay(day) === last ? run + 1 : 1;
@@ -128,7 +126,7 @@ export function statistics(save, today = dailyDay()) {
         streak++;
         day = previousDay(day);
     }
-    const attempted = Object.keys(save.daily).length + save.serial;
+    const attempted = Object.keys(save.daily).length;
     return { attempted, completed: records.length, wins: wins.length, winRate: records.length ? Math.round(100 * wins.length / records.length) : 0, streak, longest, best: Math.max(0, ...records.map(r => r.score)), average: records.length ? Math.round(records.reduce((n, r) => n + r.score, 0) / records.length) : 0, averageHints: records.length ? (records.reduce((n, r) => n + r.hints, 0) / records.length).toFixed(1) : '0', byLevel: [1, 2, 3, 4, 5].map(level => ({ level, played: records.filter(r => r.level === level).length, wins: wins.filter(r => r.level === level).length })), averageStrokes: wins.length ? (wins.reduce((n, r) => n + r.strokes, 0) / wins.length).toFixed(1) : '0', fewestStrokes: wins.length ? Math.min(...wins.map(r => r.strokes)) : 0 };
 }
 export function shareText(s) { return `${catalog[s.puzzle.game].name.toUpperCase()} · ${s.mode === 'daily' ? s.day : 'Practice'}\n${s.phase === 'solved' ? '✦ Solved' : '◇ Revealed'} · ${s.score} points\n${s.puzzle.game === 'linebyline' ? `✏ Strokes: ${s.progress.strokes}/${s.puzzle.total}\n` : ''}Hints: ${s.hints} · Misses: ${s.mistakes}\nhttps://foxhollowlabs.dev/${s.puzzle.game}/`; }
@@ -179,7 +177,7 @@ export function decode(raw, game) { const empty = blankSave(game); if (!raw)
     empty.animation = v.animation !== false;
     empty.continuous = v.continuous === true;
     empty.hintOrder = v.hintOrder === 'category' ? 'category' : 'geography';
-    return empty;
+    return migrateScores(empty, v.scoreVersion);
 }
 catch {
     return empty;
