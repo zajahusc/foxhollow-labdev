@@ -1,0 +1,11 @@
+{
+  "modelArchiveMD5": "c289bc5d7f2f02c6dc9f2f9b67641813",
+  "normalizedFloat32SHA256": "83b4cf8d82060dea4fd1158fe2dbed783104827017d20c46da65a6b46b708d1c",
+  "vocabulary": 6028,
+  "dimensions": 50,
+  "targets": 100,
+  "weaveWords": 1805,
+  "modifications": "Filtered against existing PG WordNet vocabulary plus explicit everyday target list and exclusions; first 6000 eligible frequency-ordered entries plus targets; L2 normalized and stored little-endian Float32. Targets selected and estimated by neighbor density/frequency, not observed player performance.",
+  "modelLicense": "https://opendatacommons.org/licenses/pddl/",
+  "source": "https://github.com/RaRe-Technologies/gensim-data/releases/download/glove-wiki-gigaword-50/glove-wiki-gigaword-50.gz"
+}

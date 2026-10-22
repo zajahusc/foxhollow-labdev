@@ -93,8 +93,8 @@ try{
  }
  // Existing game and collection navigation are retained.
  {
-  const {context,page}=await setup();await page.goto(base+'/games/');assert.equal(await page.locator('.collection-card').count(),3);
-  await page.goto(base+'/');assert.equal(await page.locator('.game-cards a').count(),3);await page.goto(base+'/wordbridge/');assert.match(await page.locator('h1').innerText(),/WordBridge/);check('Homepage and collection link all three games; WordBridge remains available');await context.close();
+  const {context,page}=await setup();await page.goto(base+'/games/');assert.equal(await page.locator('.collection-card').count(),6);
+  await page.goto(base+'/');assert.equal(await page.locator('.game-cards a').count(),6);await page.goto(base+'/wordbridge/');assert.match(await page.locator('h1').innerText(),/WordBridge/);check('Homepage and collection link all six games; WordBridge remains available');await context.close();
  }
  // Unavailable storage must not prevent a playable puzzle.
  {

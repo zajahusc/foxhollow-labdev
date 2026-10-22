@@ -13,3 +13,5 @@ Only public game assets are included; dictionary licenses are in `wordbridge/dat
 - `/games/`: collection page linking all three games.
 
 The two new games use shared TypeScript, build to committed static ES modules, and require no backend. Run `npm ci`, `npm run build`, then `npm run dev`. Verification: `npm run check`, `npm run lint`, `npm test`, and `npm run test:browser` with the local preview running. Full architecture, publication instructions, content counts, limitations and extension guidance are in [games/README.md](games/README.md) and [games/CONTENT.md](games/CONTENT.md).
+
+The collection also includes [Word Orbit](/wordorbit/), [Semantic Gravity](/semanticgravity/) and [Word Weave](/wordweave/). See [new-game architecture, content counts, sources and operating instructions](games/NEW-GAMES.md). Real versioned GloVe rankings power Gravity; a dictionary-backed constraint solver validates Weave grids, with proven unique daily completions and an explicitly open-ended Free Weave mode.

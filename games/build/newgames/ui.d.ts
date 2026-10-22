@@ -1,0 +1,11 @@
+export declare function el<T extends HTMLElement = HTMLElement>(tag: string, text?: string, cls?: string): T;
+export declare function button(text: string, action: () => void, cls?: string): HTMLButtonElement;
+export declare function link(text: string, href: string, cls?: string): HTMLAnchorElement;
+export declare function select(name: string, options: [string, string][], value: string, changed: (value: string) => void): HTMLSelectElement;
+export declare function label(text: string, control: HTMLElement): HTMLLabelElement;
+export declare function modal(title: string, nodes: Node[]): void;
+export declare function closeModal(): void;
+export declare function confirm(title: string, text: string, action: () => void): void;
+export declare function notify(text: string): void;
+export declare function copy(text: string): Promise<void>;
+export declare function share(text: string): Promise<void>;

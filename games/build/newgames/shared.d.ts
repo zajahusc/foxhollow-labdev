@@ -1,0 +1,26 @@
+import { utcDay, previousDay } from '../engine.js';
+import { normalize, shuffle } from '../data.js';
+import type { Level } from '../types.js';
+import type { NewGame, NewSession, Save, WeavePuzzle } from './types.js';
+export { utcDay, previousDay, normalize, shuffle };
+export declare const names: Record<NewGame, string>;
+export declare const levels: string[];
+export declare const storageKey: (game: NewGame) => string;
+export declare function blankSave(): Save;
+export declare function initial(game: NewGame, id: string, level: Level, mode: 'daily' | 'practice', serial: number, puzzle?: WeavePuzzle, limit?: number | null): NewSession;
+export declare function decode(raw: string | null, game: NewGame): Save;
+export declare function puzzleId(s: NewSession): string;
+export declare function commit(d: Save, s: NewSession): Save;
+export declare function statistics(d: Save, today?: string): {
+    attempted: number;
+    finished: number;
+    wins: number;
+    winRate: number;
+    streak: number;
+    longest: number;
+    total: number;
+    best: number;
+    average: number;
+};
+export declare function giveUp(s: NewSession): NewSession;
+export declare function resultText(s: NewSession): string;

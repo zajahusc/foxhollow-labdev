@@ -426,7 +426,7 @@ function render() {
     content.append(top);
     const switcher = $('nav', '', 'game-switcher');
     switcher.setAttribute('aria-label', 'Games');
-    switcher.append(link('WordBridge', '/wordbridge/'), link('The Fourth Thing', '/fourthword/', fourth ? 'active' : ''), link('The Odd Rule', '/oddrule/', fourth ? '' : 'active'));
+    switcher.append(link('All games', '/games/'), link('WordBridge', '/wordbridge/'), link('The Fourth Thing', '/fourthword/', fourth ? 'active' : ''), link('The Odd Rule', '/oddrule/', fourth ? '' : 'active'));
     content.append(switcher);
     const hero = $('header', '', 'game-hero'), mark = $('div', fourth ? '✦' : '∴', 'game-mark');
     mark.setAttribute('aria-hidden', 'true');

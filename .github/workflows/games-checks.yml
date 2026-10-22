@@ -1,9 +1,9 @@
 name: Daily games checks
 on:
   push:
-    paths: ['games/**', 'fourthword/**', 'oddrule/**', 'package*.json', 'tsconfig.json', 'eslint.config.mjs', '.github/workflows/games-checks.yml']
+    paths: ['games/**', 'fourthword/**', 'oddrule/**', 'wordorbit/**', 'semanticgravity/**', 'wordweave/**', 'package*.json', 'tsconfig.json', 'eslint.config.mjs', '.github/workflows/games-checks.yml']
   pull_request:
-    paths: ['games/**', 'fourthword/**', 'oddrule/**', 'package*.json', 'tsconfig.json', 'eslint.config.mjs', '.github/workflows/games-checks.yml']
+    paths: ['games/**', 'fourthword/**', 'oddrule/**', 'wordorbit/**', 'semanticgravity/**', 'wordweave/**', 'package*.json', 'tsconfig.json', 'eslint.config.mjs', '.github/workflows/games-checks.yml']
 permissions:
   contents: read
 jobs:

@@ -1,0 +1,17 @@
+import type { Level } from '../types.js';
+import type { Slot, SolveResult, WeaveMode, WeavePuzzle, WeaveSession } from './types.js';
+export declare function slots(layout: string, size: number): Slot[];
+export declare function counts(letters: string): Record<string, number>;
+export declare function solve(p: WeavePuzzle, entry?: string, limit?: number, budget?: number, seed?: string): SolveResult;
+export declare function checkGrid(p: WeavePuzzle, letters: string, requireComplete?: boolean): string[];
+export declare function validateWeave(p: WeavePuzzle, prove?: boolean): string[];
+export declare function makeWeave(size: number, mode: WeaveMode, level: Level, seed: string): WeavePuzzle;
+export declare function editCell(s: WeaveSession, cell: number, raw: string): WeaveSession;
+export declare function undo(s: WeaveSession): WeaveSession;
+export declare function redo(s: WeaveSession): WeaveSession;
+export declare function weaveScore(s: WeaveSession): number;
+export declare function submitWeave(s: WeaveSession): {
+    session: WeaveSession;
+    issues: string[];
+};
+export declare const dictionaryCandidates: (pattern: string) => string[];

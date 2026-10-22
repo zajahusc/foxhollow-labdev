@@ -204,7 +204,7 @@ function render(){
  const content=document.createDocumentFragment();
  const top=$('div','','masthead');top.append(link('F.  FOXHOLLOW LABS','/','brand'));
  const tools=$('div','','toolbar');tools.append(button('?',instructions,'icon'),button('Stats',showStats,'tool'),button('Settings',settings,'tool'));tools.children[0]!.setAttribute('aria-label','How to play');top.append(tools);content.append(top);
- const switcher=$('nav','','game-switcher');switcher.setAttribute('aria-label','Games');switcher.append(link('WordBridge','/wordbridge/'),link('The Fourth Thing','/fourthword/',fourth?'active':''),link('The Odd Rule','/oddrule/',fourth?'':'active'));content.append(switcher);
+ const switcher=$('nav','','game-switcher');switcher.setAttribute('aria-label','Games');switcher.append(link('All games','/games/'),link('WordBridge','/wordbridge/'),link('The Fourth Thing','/fourthword/',fourth?'active':''),link('The Odd Rule','/oddrule/',fourth?'':'active'));content.append(switcher);
  const hero=$('header','','game-hero'),mark=$('div',fourth?'✦':'∴','game-mark');mark.setAttribute('aria-hidden','true');
  hero.append($('p','A FOXHOLLOW DAILY PUZZLE','eyebrow'),mark,$('h1',title),$('p',fourth?'Three belong together. What’s the fourth?':'Find the rule. Break the pattern.','tagline'));content.append(hero);
  const tabs=$('nav','','mode-tabs');tabs.setAttribute('aria-label','Play mode');
