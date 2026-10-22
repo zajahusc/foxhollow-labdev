@@ -1,7 +1,8 @@
-const CACHE='wordbridge-v1';
-const ASSETS=['./','./index.html','./styles.css','./app.js','./engine.js','./dictionary-client.js','./icon.svg','./manifest.webmanifest','./data/Synonyms.json','./data/DailyChallenges.json','./data/Licenses.txt','./data/Provenance.json'];
+const CACHE='wordbridge-v2';
+const ASSETS=['/games/style.css','./','./index.html','./styles.css','./app.js','./engine.js','./dictionary-client.js','./icon.svg','./manifest.webmanifest','./data/Synonyms.json','./data/DailyChallenges.json','./data/Licenses.txt','./data/Provenance.json'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(async cache=>{
  await cache.addAll(ASSETS);
+ await self.skipWaiting();
  // Capture static-host 404s too, so offline reload can still select the bundled dictionary.
  try{const response=await fetch('./api/dictionary');if(response.ok||response.status===404)await cache.put('./api/dictionary',response);}catch{}
 }));});

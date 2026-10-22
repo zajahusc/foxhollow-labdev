@@ -1,3 +1,5 @@
+> Historical release document. The current collection no longer includes the retired game described here; Word Weave and WordBridge were redesigned on October 22, 2026. See [UX-UPDATE.md](UX-UPDATE.md) for current behavior.
+
 # Word Orbit, Semantic Gravity and Word Weave
 
 New routes: `/wordorbit/`, `/semanticgravity/`, `/wordweave/`. They extend the existing static GitHub Pages collection without replacing WordBridge, The Fourth Thing or The Odd Rule.

@@ -1,18 +1,17 @@
 import {utcDay,previousDay} from '../engine.js';
 import {hash,normalize,shuffle} from '../data.js';
 import type {Level} from '../types.js';
-import type {NewGame,NewSession,Save,Result,OrbitSession,GravitySession,WeaveSession,WeavePuzzle} from './types.js';
+import type {NewGame,NewSession,Save,Result,GravitySession,WeaveSession,WeavePuzzle} from './types.js';
 export {utcDay,previousDay,normalize,shuffle};
-export const names:Record<NewGame,string>={wordorbit:'Word Orbit',semanticgravity:'Semantic Gravity',wordweave:'Word Weave'};
+export const names:Record<NewGame,string>={semanticgravity:'Semantic Gravity',wordweave:'Word Weave'};
 export const levels=['Easy','Normal','Hard','Expert','Master'];
 export const storageKey=(game:NewGame)=>`foxhollow.${game}.v1`;
 export function blankSave():Save{return {version:1,daily:{},practice:null,records:[],attempted:[],recent:[],serial:0,theme:'system',dailyLimit:null,feedback:[]};}
 export function initial(game:NewGame,id:string,level:Level,mode:'daily'|'practice',serial:number,puzzle?:WeavePuzzle,limit:number|null=null):NewSession{
  const day=utcDay(),base={key:mode==='daily'?`daily:${day}`:`practice:${serial}`,game,mode,day,level,phase:'playing' as const,started:Date.now(),finished:null,score:0,guesses:[],mistakes:0,hints:0};
- if(game==='wordorbit')return {...base,game,puzzleId:id,filled:{},assistance:{},active:null} satisfies OrbitSession;
  if(game==='semanticgravity')return {...base,game,puzzleId:id,ranks:[],limit:mode==='practice'?null:limit||[25,20,15,12,10][level-1]!} satisfies GravitySession;
  if(!puzzle)throw Error('A verified Weave grid is required.');
- return {...base,game,puzzle,letters:puzzle.givens,notes:{},past:[],future:[],selected:puzzle.givens.indexOf('.'),pencil:false,hintsByType:[0,0,0],hintLetters:{},feedback:level<4} satisfies WeaveSession;
+ return {...base,game,puzzle,letters:puzzle.givens,notes:{},past:[],future:[],selected:puzzle.givens.indexOf('.'),pencil:false,hintsByType:[0,0,0],hintLetters:{},feedback:false} satisfies WeaveSession;
 }
 const object=(v:unknown):v is Record<string,unknown>=>typeof v==='object'&&v!==null&&!Array.isArray(v);
 const finite=(v:unknown):v is number=>typeof v==='number'&&Number.isFinite(v)&&v>=0;
@@ -20,7 +19,6 @@ const strings=(v:unknown):v is string[]=>Array.isArray(v)&&v.every(x=>typeof x==
 const dictionaryObject=(v:unknown,value:(v:unknown)=>boolean)=>object(v)&&Object.values(v).every(value);
 function validSession(v:unknown,game:NewGame):v is NewSession{
  if(!object(v)||v.game!==game||typeof v.key!=='string'||typeof v.day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(v.day)||!['daily','practice'].includes(String(v.mode))||!['playing','solved','failed'].includes(String(v.phase))||!finite(v.level)||![1,2,3,4,5].includes(v.level)||!finite(v.started)||!(v.finished===null||finite(v.finished))||!finite(v.score)||!strings(v.guesses)||!finite(v.mistakes)||!finite(v.hints))return false;
- if(game==='wordorbit')return typeof v.puzzleId==='string'&&dictionaryObject(v.filled,x=>typeof x==='string')&&dictionaryObject(v.assistance,x=>finite(x)&&x<=3)&&(v.active===null||typeof v.active==='string');
  if(game==='semanticgravity')return typeof v.puzzleId==='string'&&(v.limit===null||finite(v.limit))&&Array.isArray(v.ranks)&&v.ranks.every(x=>object(x)&&typeof x.word==='string'&&finite(x.rank));
  if(!object(v.puzzle)||typeof v.puzzle.givens!=='string'||typeof v.puzzle.layout!=='string'||!finite(v.puzzle.size)||typeof v.letters!=='string'||v.letters.length!==v.puzzle.givens.length||v.puzzle.layout.length!==v.letters.length)return false;
  const letterLength=v.letters.length;

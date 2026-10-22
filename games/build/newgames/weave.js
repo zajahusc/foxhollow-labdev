@@ -1,20 +1,24 @@
 import { shuffle } from '../data.js';
+import { crosswordLexicon, crosswordVersion } from './crossword-lexicon.js';
 import { dictionary, dictionaryVersion } from './dictionary.js';
 const words = new Set(dictionary);
+const crosswordWords = Object.keys(crosswordLexicon);
+const crossWords = new Set(crosswordWords);
+export const dimensions = (p) => [p.width || p.size, p.height || p.size];
 const byLength = new Map();
 for (const w of dictionary)
     byLength.set(w.length, [...(byLength.get(w.length) || []), w]);
 const patternCache = new Map();
-export function slots(layout, size) {
-    if (layout.length !== size * size)
+export function slots(layout, size, height = size) {
+    if (layout.length !== size * height)
         throw Error('Grid dimensions disagree');
     const out = [];
     for (const direction of ['across', 'down'])
-        for (let major = 0; major < size; major++) {
+        for (let major = 0; major < (direction === 'across' ? height : size); major++) {
             let run = [];
             const end = () => { if (run.length >= 2)
                 out.push({ id: `${direction}-${out.length}`, cells: run, direction }); run = []; };
-            for (let minor = 0; minor < size; minor++) {
+            for (let minor = 0; minor < (direction === 'across' ? size : height); minor++) {
                 const at = direction === 'across' ? major * size + minor : minor * size + major;
                 if (layout[at] === '#')
                     end();
@@ -25,14 +29,14 @@ export function slots(layout, size) {
         }
     return out;
 }
-function candidates(pattern) {
-    const cached = patternCache.get(pattern);
+function candidates(pattern, crossword = false) {
+    const cached = patternCache.get((crossword ? 'v2:' : 'v1:') + pattern);
     if (cached)
         return cached;
-    const c = (byLength.get(pattern.length) || []).filter(w => [...pattern].every((x, i) => x === '.' || w[i] === x));
+    const c = (crossword ? crosswordWords.filter(w => w.length === pattern.length) : (byLength.get(pattern.length) || [])).filter(w => [...pattern].every((x, i) => x === '.' || w[i] === x));
     if (patternCache.size > 10000)
         patternCache.clear();
-    patternCache.set(pattern, c);
+    patternCache.set((crossword ? 'v2:' : 'v1:') + pattern, c);
     return c;
 }
 export function counts(letters) { const result = {}; for (const c of letters)
@@ -45,7 +49,7 @@ function fitsInventory(p, letters) {
     return Object.entries(used).every(([c, n]) => n <= (available[c] || 0));
 }
 export function solve(p, entry = p.givens, limit = 2, budget = 200000, seed = '') {
-    const positions = slots(p.layout, p.size), solutions = [];
+    const positions = slots(p.layout, ...dimensions(p)), solutions = [];
     let nodes = 0, exhausted = true;
     if (entry.length !== p.layout.length)
         return { solutions: [], nodes: 0, exhausted: true };
@@ -73,13 +77,13 @@ export function solve(p, entry = p.givens, limit = 2, budget = 200000, seed = ''
         }
         const domains = positions.map(slot => ({ slot, pattern: slot.cells.map(i => board[i]).join('') }));
         const completed = domains.filter(x => !x.pattern.includes('.')).map(x => x.pattern);
-        if (completed.some(w => !words.has(w)) || p.constraints.noRepeat && new Set(completed).size !== completed.length || !fitsInventory(p, board))
+        if (completed.some(w => !(p.dictionary === crosswordVersion ? crossWords : words).has(w)) || p.constraints.noRepeat && new Set(completed).size !== completed.length || !fitsInventory(p, board))
             return;
         let chosen = null;
         for (const { slot, pattern } of domains) {
             if (!pattern.includes('.'))
                 continue;
-            const values = candidates(pattern).filter(w => !p.constraints.noRepeat || !completed.includes(w));
+            const values = (p.clues?.[slot.id] ? p.clues[slot.id].accepted.filter(w => [...pattern].every((c, i) => c === '.' || w[i] === c)) : candidates(pattern, p.dictionary === crosswordVersion)).filter(w => !p.constraints.noRepeat || !completed.includes(w));
             if (!values.length)
                 return;
             if (!chosen || values.length < chosen.values.length)
@@ -98,7 +102,7 @@ export function solve(p, entry = p.givens, limit = 2, budget = 200000, seed = ''
             const text = next.join('');
             if (!fitsInventory(p, text))
                 continue;
-            if (positions.some(s => !candidates(s.cells.map(i => text[i]).join('')).length))
+            if (positions.some(s => { const pattern = s.cells.map(i => text[i]).join(''); return !(p.clues?.[s.id] ? p.clues[s.id].accepted.filter(w => [...pattern].every((c, i) => c === '.' || w[i] === c)) : candidates(pattern, p.dictionary === crosswordVersion)).length; }))
                 continue;
             search(text);
             if (solutions.length >= limit || nodes > budget) {
@@ -118,15 +122,21 @@ export function checkGrid(p, letters, requireComplete = true) {
         issues.push('A fixed cell was changed.');
     if (requireComplete && letters.includes('.'))
         issues.push('Fill every open cell.');
-    const runs = slots(p.layout, p.size), complete = [];
+    const runs = slots(p.layout, ...dimensions(p)), complete = [];
     for (const [i, s] of runs.entries()) {
         const w = s.cells.map(n => letters[n]).join('');
         if (!w.includes('.')) {
             complete.push(w);
-            if (!words.has(w))
+            if (!(p.dictionary === crosswordVersion ? crossWords : words).has(w))
                 issues.push(`${s.direction} run ${i + 1}: ${w.toUpperCase()} is outside the puzzle dictionary.`);
         }
     }
+    if (p.clues)
+        for (const run of runs) {
+            const text = run.cells.map(i => letters[i]).join('');
+            if (!text.includes('.') && !p.clues[run.id]?.accepted.includes(text))
+                issues.push(`${run.direction} ${p.clues[run.id]?.number}: the entry does not fit its clue.`);
+        }
     if (p.constraints.noRepeat && new Set(complete).size !== complete.length)
         issues.push('Repeated words are not permitted.');
     if (!fitsInventory(p, letters))
@@ -137,14 +147,16 @@ export function checkGrid(p, letters, requireComplete = true) {
 }
 export function validateWeave(p, prove = true) {
     const issues = [];
-    if (p.dictionary !== dictionaryVersion || p.layout.length !== p.size * p.size || !['square', 'cross', 'letter', 'free'].includes(p.mode))
+    if (![dictionaryVersion, crosswordVersion].includes(p.dictionary) || p.layout.length !== dimensions(p)[0] * dimensions(p)[1] || !['square', 'cross', 'letter', 'free', 'crossword'].includes(p.mode))
         issues.push('Invalid dictionary or layout version.');
-    const covered = new Set(slots(p.layout, p.size).flatMap(s => s.cells));
+    const covered = new Set(slots(p.layout, ...dimensions(p)).flatMap(s => s.cells));
     if ([...p.layout].some((c, i) => c !== '#' && !covered.has(i)))
         issues.push('An open cell belongs to no word.');
     issues.push(...checkGrid(p, p.solution));
-    const fullWord = slots(p.layout, p.size).some(s => s.direction === 'across' && s.cells.every(i => /[a-z]/.test(p.givens[i])));
-    if (!fullWord)
+    if (p.mode === 'crossword' && slots(p.layout, ...dimensions(p)).some(s => !p.clues?.[s.id]?.text || !p.clues[s.id].accepted.includes(p.clues[s.id].answer)))
+        issues.push('Missing crossword clue.');
+    const fullWord = slots(p.layout, ...dimensions(p)).some(s => s.direction === 'across' && s.cells.every(i => /[a-z]/.test(p.givens[i])));
+    if (p.mode !== 'crossword' && !fullWord)
         issues.push('A complete starting word is required.');
     if (p.unique && prove) {
         const result = solve(p);
@@ -253,3 +265,30 @@ export function submitWeave(s) {
     return { session: { ...s, phase: 'solved', score: weaveScore(s), finished: Date.now() }, issues: [] };
 }
 export const dictionaryCandidates = (pattern) => [...candidates(pattern)];
+const basePatterns = [['...##', '...##', '.....', '##...', '##...'], ['....###', '....###', '.......', '###....', '###....']];
+const transpose = (rows) => [...rows[0]].map((_, i) => rows.map(row => row[i]).join(''));
+export const crosswordPatterns = [...basePatterns, transpose(basePatterns[1]), transpose(basePatterns[0])];
+export function makeCrossword(level, seed, patternIndex = 0) {
+    const rows = crosswordPatterns[patternIndex % crosswordPatterns.length], width = rows[0].length, height = rows.length;
+    const layout = rows.join(''), p = { id: `crossword-v2-${seed}`, level, size: width, width, height, mode: 'crossword', layout, givens: layout, solution: '', inventory: null, dictionary: crosswordVersion, unique: true, searchNodes: 0, constraints: { noRepeat: true }, estimated: true };
+    const full = solve(p, layout, 1, 200000, seed);
+    if (!full.solutions[0])
+        throw Error('No crossword fill found in the search budget.');
+    p.solution = full.solutions[0];
+    const runs = slots(layout, width, height), starts = [...new Set(runs.map(s => s.cells[0]))].sort((a, b) => a - b);
+    p.clues = {};
+    for (const run of runs) {
+        const answer = run.cells.map(i => p.solution[i]).join(''), entry = crosswordLexicon[answer];
+        if (!entry)
+            throw Error('A source clue is missing.');
+        p.clues[run.id] = { number: starts.indexOf(run.cells[0]) + 1, text: entry.text, answer, accepted: entry.accepted.filter(w => crossWords.has(w)), synset: entry.synset };
+    }
+    const result = solve(p);
+    p.searchNodes = result.nodes;
+    if (result.solutions.length !== 1 || !result.exhausted)
+        throw Error('Clues do not yet determine a unique crossword.');
+    const errors = validateWeave(p);
+    if (errors.length)
+        throw Error(errors.join('; '));
+    return p;
+}

@@ -1,1 +1,1 @@
-{"name":"WordBridge","short_name":"WordBridge","description":"Two words. You make the link.","start_url":"./","scope":"./","display":"standalone","background_color":"#faf7f0","theme_color":"#faf7f0","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{"name":"WordBridge","short_name":"WordBridge","description":"Two words. You make the link.","start_url":"./","scope":"./","display":"standalone","background_color":"#f7f6f1","theme_color":"#f7f6f1","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}

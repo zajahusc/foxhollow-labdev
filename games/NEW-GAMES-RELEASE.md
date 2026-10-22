@@ -1,3 +1,5 @@
+> Historical release document. The current collection no longer includes the retired game described here; Word Weave and WordBridge were redesigned on October 22, 2026. See [UX-UPDATE.md](UX-UPDATE.md) for current behavior.
+
 # Release report — Word Orbit, Semantic Gravity, Word Weave
 
 ## Implemented

@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {orbitBank,validateOrbit,activeOrbits,orbitCount,orbitGuess,orbitHint} from '../build/newgames/orbit.js';
 import {gravityTargets} from '../build/newgames/targets.js';
 import {cosine,model,rank,gravityGuess,gravityHint,neighborHints,temperature,normalizeGuess} from '../build/newgames/gravity.js';
 import {weaveBank} from '../build/newgames/weave-bank.js';
+import {crosswordBank} from '../build/newgames/crossword-bank.js';
 import {dictionary,dictionaryVersion} from '../build/newgames/dictionary.js';
 import {solve,slots,counts,validateWeave,checkGrid,editCell,undo,redo,submitWeave,weaveScore,makeWeave} from '../build/newgames/weave.js';
 import {initial,blankSave,commit,decode,giveUp,statistics,resultText,utcDay} from '../build/newgames/shared.js';
@@ -16,27 +16,6 @@ const vectors=new Float32Array(raw.buffer.slice(raw.byteOffset,raw.byteOffset+ra
 const trained=model(vocabulary,vectors);
 const template={id:'test-free',size:3,mode:'free',level:1,layout:'.........',givens:'cat......',solution:'catareten',inventory:null,dictionary:dictionaryVersion,unique:false,searchNodes:0,constraints:{noRepeat:false},estimated:true};
 
-test('Orbit: every center has eight reviewed, disjoint relationship groups',()=>{
- assert.equal(orbitBank.length,12);assert.equal(orbitBank.reduce((n,p)=>n+p.orbits.length,0),96);
- for(const p of orbitBank){assert.deepEqual(validateOrbit(p),[]);for(let level=1;level<=5;level++)assert.equal(activeOrbits(p,level).length,[4,5,6,6,8][level-1]);}
- const p=structuredClone(orbitBank[0]);p.orbits[1].accepted.push(p.orbits[0].answer);assert.ok(validateOrbit(p).some(x=>x.includes('Overlapping')));
-});
-test('Orbit: approved variants normalize, each guess fills one orbit, duplicates do not spend points',()=>{
- const p=orbitBank[0];let s=initial('wordorbit',p.id,1,'daily',0);
- s=orbitGuess(s,p,'  SUN  ').session;assert.equal(Object.keys(s.filled).length,1);assert.equal(s.score,100);
- assert.equal(orbitGuess(s,p,'sun').session,s);assert.equal(orbitGuess(s,p,'our sun').session,s);
- const miss=orbitGuess(s,p,'a plausible unlisted connection');assert.match(miss.message,/not in this puzzle/);assert.equal(miss.session.mistakes,1);
-});
-test('Orbit: guided/blind levels, all required orbits, full no-hint scoring and results',()=>{
- for(const level of [1,2,3,4,5]){const p=orbitBank[0];let s=initial('wordorbit',p.id,level,'practice',1);for(const o of activeOrbits(p,level))s=orbitGuess(s,p,o.answer).session;
-  assert.equal(s.phase,'solved');assert.equal(s.score,orbitCount(level)*100+150);assert.ok(s.finished);}
-});
-test('Orbit: targeted three-stage hints, expert caps, penalties and zero floor',()=>{
- const p=orbitBank[0];let s=initial('wordorbit',p.id,4,'practice',1);for(const o of p.orbits.slice(0,2))for(let n=0;n<3;n++)s=orbitHint(s,o.id,p);
- assert.equal(s.hints,6);assert.equal(orbitHint(s,p.orbits[2].id,p),s);assert.equal(orbitHint(s,'missing',p),s);
- for(let i=0;i<80;i++)s=orbitGuess(s,p,'unlisted '+i).session;
- for(const o of activeOrbits(p,4))s=orbitGuess(s,p,o.answer).session;assert.equal(s.score,0);
-});
 test('Gravity: actual frozen vectors match metadata checksum and dimensionality',()=>{
  assert.equal(vocabulary.words.length,6028);assert.equal(vectors.length,6028*50);assert.equal(createHash('sha256').update(raw).digest('hex'),vocabulary.sha256);
  assert.throws(()=>model(vocabulary,new Float32Array(30)),/Invalid/);assert.throws(()=>cosine([1,2],[1]),/dimensions/);assert.throws(()=>cosine([0,0],[1,1]),/Zero/);
@@ -98,18 +77,20 @@ test('Weave: deterministic generator produces proven grids and supported mode po
  for(const mode of ['square','letter','cross']){const size=mode==='cross'?5:4;const a=makeWeave(size,mode,3,'unit-generated-'+mode),b=makeWeave(size,mode,3,'unit-generated-'+mode);assert.deepEqual(a,b);assert.deepEqual(validateWeave(a),[]);}
  const free=makeWeave(3,'free',1,'free');assert.equal(free.unique,false);assert.throws(()=>makeWeave(4,'cross',2,'invalid'),/5×5/);
 });
-test('New game publication schedule resolves all 1,095 assignments without implicit selection',()=>{
+test('New game publication schedule resolves all 730 assignments without implicit selection',()=>{
  assert.equal(Object.keys(newSchedule).length,365);for(const entry of Object.values(newSchedule)){
-  assert.ok(orbitBank.some(p=>p.id===entry.wordorbit.id));assert.ok(gravityTargets.some(p=>p.id===entry.semanticgravity.id));assert.ok(weaveBank.some(p=>p.id===entry.wordweave.id));}
+  assert.ok(gravityTargets.some(p=>p.id===entry.semanticgravity.id));assert.ok([...weaveBank,...crosswordBank].some(p=>p.id===entry.wordweave.id));}
  assert.equal(newSchedule['2027-10-21'],undefined);
 });
-test('Shared saves: separate games, corrupt data, refresh restore and first completed daily score',()=>{
- const p=orbitBank[0];let s=initial('wordorbit',p.id,1,'daily',0);s=orbitGuess(s,p,'sun').session;let d=commit(blankSave(),s);assert.deepEqual(decode(JSON.stringify(d),'wordorbit'),d);
- assert.equal(decode(JSON.stringify(d),'wordweave').daily[utcDay()],undefined);assert.deepEqual(decode('{broken','wordorbit'),blankSave());
- for(const o of activeOrbits(p,1).filter(o=>!s.filled[o.id]))s=orbitGuess(s,p,o.answer).session;d=commit(d,s);assert.equal(d.records.length,1);assert.equal(commit(d,giveUp(initial('wordorbit',p.id,1,'daily',0))).records[0].score,d.records[0].score);
- assert.equal(statistics(d).streak,1);assert.equal(statistics(d).wins,1);
- const shared=resultText(s);assert.ok(!shared.includes('sun'));assert.ok(!shared.includes('star'));
+test('Shared saves: separate games, corrupt data and immutable first completed daily score',()=>{
+ const p=gravityTargets[0],r=rank(trained,p);let state=initial('semanticgravity',p.id,p.level,'daily',0);state=gravityGuess(state,p,r,r.ordered[2]).session;let data=commit(blankSave(),state);assert.deepEqual(decode(JSON.stringify(data),'semanticgravity'),data);
+ assert.equal(decode(JSON.stringify(data),'wordweave').daily[utcDay()],undefined);assert.deepEqual(decode('{bad','semanticgravity'),blankSave());state=gravityGuess(state,p,r,p.word).session;data=commit(data,state);assert.equal(data.records.length,1);assert.equal(commit(data,giveUp(initial('semanticgravity',p.id,p.level,'daily',0))).records[0].score,data.records[0].score);assert.equal(statistics(data).streak,1);assert.ok(!resultText(state).includes(p.word));
 });
 test('Weave progress with notes/history round-trips safely; reveal earns zero',()=>{
  const p=weaveBank[0];let s=initial('wordweave',p.id,p.level,'daily',0,p);s=editCell({...s,pencil:true},s.selected,'e');const saved=commit(blankSave(),s);assert.deepEqual(decode(JSON.stringify(saved),'wordweave'),saved);assert.equal(giveUp(s).score,0);assert.equal(giveUp(s).phase,'failed');
+});
+
+test('Crossword publication: irregular and rectangular blanks, numbered source clues, proven unique solutions',()=>{
+ assert.ok(crosswordBank.length>=90);assert.ok(crosswordBank.some(p=>p.width!==p.height));assert.equal(new Set(crosswordBank.map(p=>p.layout+p.solution)).size,crosswordBank.length);
+ for(const p of crosswordBank){assert.equal(p.givens,p.layout);assert.equal(p.inventory,null);assert.ok(p.layout.includes('#'));assert.deepEqual(validateWeave(p),[],p.id);assert.ok(Object.values(p.clues).every(c=>c.text&&c.synset&&c.number>0&&!c.text.toLowerCase().split(/[^a-z]+/).includes(c.answer)));assert.deepEqual(checkGrid(p,p.solution),[]);}
 });

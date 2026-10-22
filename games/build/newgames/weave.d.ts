@@ -1,6 +1,7 @@
 import type { Level } from '../types.js';
 import type { Slot, SolveResult, WeaveMode, WeavePuzzle, WeaveSession } from './types.js';
-export declare function slots(layout: string, size: number): Slot[];
+export declare const dimensions: (p: WeavePuzzle) => [number, number];
+export declare function slots(layout: string, size: number, height?: number): Slot[];
 export declare function counts(letters: string): Record<string, number>;
 export declare function solve(p: WeavePuzzle, entry?: string, limit?: number, budget?: number, seed?: string): SolveResult;
 export declare function checkGrid(p: WeavePuzzle, letters: string, requireComplete?: boolean): string[];
@@ -15,3 +16,5 @@ export declare function submitWeave(s: WeaveSession): {
     issues: string[];
 };
 export declare const dictionaryCandidates: (pattern: string) => string[];
+export declare const crosswordPatterns: string[][];
+export declare function makeCrossword(level: Level, seed: string, patternIndex?: number): WeavePuzzle;

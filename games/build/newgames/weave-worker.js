@@ -1,9 +1,9 @@
-import { checkGrid, makeWeave, solve } from './weave.js';
+import { checkGrid, makeCrossword, makeWeave, solve } from './weave.js';
 const scope = globalThis;
 scope.onmessage = ({ data }) => {
     try {
         if (data.action === 'generate') {
-            scope.postMessage({ id: data.id, puzzle: makeWeave(data.size, data.mode, data.level, data.seed) });
+            scope.postMessage({ id: data.id, puzzle: data.mode === 'crossword' ? makeCrossword(data.level, data.seed, data.level % 4) : makeWeave(data.size, data.mode, data.level, data.seed) });
             return;
         }
         if (data.action === 'solve') {

@@ -1,24 +1,28 @@
 import {shuffle} from '../data.js';
+import {crosswordLexicon,crosswordVersion} from './crossword-lexicon.js';
 import {dictionary,dictionaryVersion} from './dictionary.js';
 import type {Level} from '../types.js';
 import type {Slot,SolveResult,WeaveMode,WeavePuzzle,WeaveSession} from './types.js';
 const words=new Set(dictionary);
+const crosswordWords=Object.keys(crosswordLexicon);
+const crossWords=new Set(crosswordWords);
+export const dimensions=(p:WeavePuzzle):[number,number]=>[p.width||p.size,p.height||p.size];
 const byLength=new Map<number,string[]>();for(const w of dictionary)byLength.set(w.length,[...(byLength.get(w.length)||[]),w]);
 const patternCache=new Map<string,string[]>();
-export function slots(layout:string,size:number):Slot[]{
- if(layout.length!==size*size)throw Error('Grid dimensions disagree');
+export function slots(layout:string,size:number,height=size):Slot[]{
+ if(layout.length!==size*height)throw Error('Grid dimensions disagree');
  const out:Slot[]=[];
- for(const direction of ['across','down']as const)for(let major=0;major<size;major++){
+ for(const direction of ['across','down']as const)for(let major=0;major<(direction==='across'?height:size);major++){
   let run:number[]=[];
   const end=()=>{if(run.length>=2)out.push({id:`${direction}-${out.length}`,cells:run,direction});run=[];};
-  for(let minor=0;minor<size;minor++){const at=direction==='across'?major*size+minor:minor*size+major;if(layout[at]==='#')end();else run.push(at);}end();
+  for(let minor=0;minor<(direction==='across'?size:height);minor++){const at=direction==='across'?major*size+minor:minor*size+major;if(layout[at]==='#')end();else run.push(at);}end();
  }
  return out;
 }
-function candidates(pattern:string):string[]{
- const cached=patternCache.get(pattern);if(cached)return cached;
- const c=(byLength.get(pattern.length)||[]).filter(w=>[...pattern].every((x,i)=>x==='.'||w[i]===x));
- if(patternCache.size>10000)patternCache.clear();patternCache.set(pattern,c);return c;
+function candidates(pattern:string,crossword=false):string[]{
+ const cached=patternCache.get((crossword?'v2:':'v1:')+pattern);if(cached)return cached;
+ const c=(crossword?crosswordWords.filter(w=>w.length===pattern.length):(byLength.get(pattern.length)||[])).filter(w=>[...pattern].every((x,i)=>x==='.'||w[i]===x));
+ if(patternCache.size>10000)patternCache.clear();patternCache.set((crossword?'v2:':'v1:')+pattern,c);return c;
 }
 export function counts(letters:string):Record<string,number>{const result:Record<string,number>={};for(const c of letters)if(/[a-z]/.test(c))result[c]=(result[c]||0)+1;return result;}
 function fitsInventory(p:WeavePuzzle,letters:string):boolean {
@@ -26,7 +30,7 @@ function fitsInventory(p:WeavePuzzle,letters:string):boolean {
  return Object.entries(used).every(([c,n])=>n<=(available[c]||0));
 }
 export function solve(p:WeavePuzzle,entry=p.givens,limit=2,budget=200000,seed=''):SolveResult{
- const positions=slots(p.layout,p.size),solutions:string[]=[];let nodes=0,exhausted=true;
+ const positions=slots(p.layout,...dimensions(p)),solutions:string[]=[];let nodes=0,exhausted=true;
  if(entry.length!==p.layout.length)return {solutions:[],nodes:0,exhausted:true};
  const initial=[...entry];for(let i=0;i<initial.length;i++){if(p.layout[i]==='#'){if(initial[i]!=='#')return {solutions:[],nodes:0,exhausted:true};}else if(!/^[a-z.]$/.test(initial[i]!))return {solutions:[],nodes:0,exhausted:true};if(p.givens[i]!=='.'&&p.givens[i]!==initial[i])return {solutions:[],nodes:0,exhausted:true};}
  if(!fitsInventory(p,entry))return {solutions:[],nodes:0,exhausted:true};
@@ -34,11 +38,11 @@ export function solve(p:WeavePuzzle,entry=p.givens,limit=2,budget=200000,seed=''
   if(solutions.length>=limit){exhausted=false;return;}if(++nodes>budget){exhausted=false;return;}
   const domains=positions.map(slot=>({slot,pattern:slot.cells.map(i=>board[i]).join('')}));
   const completed=domains.filter(x=>!x.pattern.includes('.')).map(x=>x.pattern);
-  if(completed.some(w=>!words.has(w))||p.constraints.noRepeat&&new Set(completed).size!==completed.length||!fitsInventory(p,board))return;
+  if(completed.some(w=>!(p.dictionary===crosswordVersion?crossWords:words).has(w))||p.constraints.noRepeat&&new Set(completed).size!==completed.length||!fitsInventory(p,board))return;
   let chosen:{slot:Slot;values:string[]}|null=null;
   for(const {slot,pattern}of domains){
    if(!pattern.includes('.'))continue;
-   const values=candidates(pattern).filter(w=>!p.constraints.noRepeat||!completed.includes(w));
+   const values=(p.clues?.[slot.id]?p.clues[slot.id]!.accepted.filter(w=>[...pattern].every((c,i)=>c==='.'||w[i]===c)):candidates(pattern,p.dictionary===crosswordVersion)).filter(w=>!p.constraints.noRepeat||!completed.includes(w));
    if(!values.length)return;if(!chosen||values.length<chosen.values.length)chosen={slot,values};
   }
   if(!chosen){if(!board.includes('.')&&!solutions.includes(board))solutions.push(board);return;}
@@ -46,7 +50,7 @@ export function solve(p:WeavePuzzle,entry=p.givens,limit=2,budget=200000,seed=''
   for(const w of ordered){const next=[...board];chosen.slot.cells.forEach((cell,i)=>next[cell]=w[i]!);
    // Forward checking: intersecting slots must retain at least one compatible dictionary entry.
    const text=next.join('');if(!fitsInventory(p,text))continue;
-   if(positions.some(s=>!candidates(s.cells.map(i=>text[i]).join('')).length))continue;
+   if(positions.some(s=>{const pattern=s.cells.map(i=>text[i]).join('');return !(p.clues?.[s.id]?p.clues[s.id]!.accepted.filter(w=>[...pattern].every((c,i)=>c==='.'||w[i]===c)):candidates(pattern,p.dictionary===crosswordVersion)).length;}))continue;
    search(text);if(solutions.length>=limit||nodes>budget){exhausted=false;return;}
   }
  }
@@ -56,8 +60,9 @@ export function checkGrid(p:WeavePuzzle,letters:string,requireComplete=true):str
  const issues:string[]=[];if(letters.length!==p.layout.length)return ['Grid has the wrong size.'];
  if([...p.givens].some((c,i)=>c!=='.'&&letters[i]!==c))issues.push('A fixed cell was changed.');
  if(requireComplete&&letters.includes('.'))issues.push('Fill every open cell.');
- const runs=slots(p.layout,p.size),complete:string[]=[];
- for(const [i,s]of runs.entries()){const w=s.cells.map(n=>letters[n]).join('');if(!w.includes('.')){complete.push(w);if(!words.has(w))issues.push(`${s.direction} run ${i+1}: ${w.toUpperCase()} is outside the puzzle dictionary.`);}}
+ const runs=slots(p.layout,...dimensions(p)),complete:string[]=[];
+ for(const [i,s]of runs.entries()){const w=s.cells.map(n=>letters[n]).join('');if(!w.includes('.')){complete.push(w);if(!(p.dictionary===crosswordVersion?crossWords:words).has(w))issues.push(`${s.direction} run ${i+1}: ${w.toUpperCase()} is outside the puzzle dictionary.`);}}
+ if(p.clues)for(const run of runs){const text=run.cells.map(i=>letters[i]).join('');if(!text.includes('.')&&!p.clues[run.id]?.accepted.includes(text))issues.push(`${run.direction} ${p.clues[run.id]?.number}: the entry does not fit its clue.`);}
  if(p.constraints.noRepeat&&new Set(complete).size!==complete.length)issues.push('Repeated words are not permitted.');
  if(!fitsInventory(p,letters))issues.push('The supplied letter inventory is exceeded.');
  if(requireComplete&&p.inventory!==null&&JSON.stringify(Object.entries(counts([...letters].filter((_,i)=>p.givens[i]==='.').join(''))).sort())!==JSON.stringify(Object.entries(counts(p.inventory)).sort()))issues.push('Use every supplied letter exactly once.');
@@ -65,10 +70,11 @@ export function checkGrid(p:WeavePuzzle,letters:string,requireComplete=true):str
 }
 export function validateWeave(p:WeavePuzzle,prove=true):string[]{
  const issues:string[]=[];
- if(p.dictionary!==dictionaryVersion||p.layout.length!==p.size*p.size||!['square','cross','letter','free'].includes(p.mode))issues.push('Invalid dictionary or layout version.');
- const covered=new Set(slots(p.layout,p.size).flatMap(s=>s.cells));if([...p.layout].some((c,i)=>c!=='#'&&!covered.has(i)))issues.push('An open cell belongs to no word.');
+ if(![dictionaryVersion,crosswordVersion].includes(p.dictionary)||p.layout.length!==dimensions(p)[0]*dimensions(p)[1]||!['square','cross','letter','free','crossword'].includes(p.mode))issues.push('Invalid dictionary or layout version.');
+ const covered=new Set(slots(p.layout,...dimensions(p)).flatMap(s=>s.cells));if([...p.layout].some((c,i)=>c!=='#'&&!covered.has(i)))issues.push('An open cell belongs to no word.');
  issues.push(...checkGrid(p,p.solution));
- const fullWord=slots(p.layout,p.size).some(s=>s.direction==='across'&&s.cells.every(i=>/[a-z]/.test(p.givens[i]!)));if(!fullWord)issues.push('A complete starting word is required.');
+ if(p.mode==='crossword'&&slots(p.layout,...dimensions(p)).some(s=>!p.clues?.[s.id]?.text||!p.clues[s.id]!.accepted.includes(p.clues[s.id]!.answer)))issues.push('Missing crossword clue.');
+ const fullWord=slots(p.layout,...dimensions(p)).some(s=>s.direction==='across'&&s.cells.every(i=>/[a-z]/.test(p.givens[i]!)));if(p.mode!=='crossword'&&!fullWord)issues.push('A complete starting word is required.');
  if(p.unique&&prove){const result=solve(p);if(result.solutions.length!==1||!result.exhausted||result.solutions[0]!==p.solution)issues.push('Unique completion has not been proven.');}
  return issues;
 }
@@ -118,3 +124,16 @@ export function submitWeave(s:WeaveSession):{session:WeaveSession;issues:string[
  return {session:{...s,phase:'solved',score:weaveScore(s),finished:Date.now()},issues:[]};
 }
 export const dictionaryCandidates=(pattern:string)=>[...candidates(pattern)];
+
+const basePatterns=[['...##','...##','.....','##...','##...'],['....###','....###','.......','###....','###....']];
+const transpose=(rows:string[])=>[...rows[0]!].map((_,i)=>rows.map(row=>row[i]).join(''));
+export const crosswordPatterns=[...basePatterns,transpose(basePatterns[1]!),transpose(basePatterns[0]!)];
+export function makeCrossword(level:Level,seed:string,patternIndex=0):WeavePuzzle{
+ const rows=crosswordPatterns[patternIndex%crosswordPatterns.length]!,width=rows[0]!.length,height=rows.length;
+ const layout=rows.join(''),p:WeavePuzzle={id:`crossword-v2-${seed}`,level,size:width,width,height,mode:'crossword',layout,givens:layout,solution:'',inventory:null,dictionary:crosswordVersion,unique:true,searchNodes:0,constraints:{noRepeat:true},estimated:true};
+ const full=solve(p,layout,1,200000,seed);if(!full.solutions[0])throw Error('No crossword fill found in the search budget.');p.solution=full.solutions[0];
+ const runs=slots(layout,width,height),starts=[...new Set(runs.map(s=>s.cells[0]!))].sort((a,b)=>a-b);p.clues={};
+ for(const run of runs){const answer=run.cells.map(i=>p.solution[i]).join(''),entry=crosswordLexicon[answer];if(!entry)throw Error('A source clue is missing.');p.clues[run.id]={number:starts.indexOf(run.cells[0]!)+1,text:entry.text,answer,accepted:entry.accepted.filter(w=>crossWords.has(w)),synset:entry.synset};}
+ const result=solve(p);p.searchNodes=result.nodes;if(result.solutions.length!==1||!result.exhausted)throw Error('Clues do not yet determine a unique crossword.');
+ const errors=validateWeave(p);if(errors.length)throw Error(errors.join('; '));return p;
+}

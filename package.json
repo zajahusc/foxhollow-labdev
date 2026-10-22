@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test games/tests/*.test.mjs",
-    "test:browser": "node games/tests/browser.mjs && node games/tests/newgames-browser.mjs",
+    "test:browser": "node games/tests/browser.mjs && node games/tests/newgames-browser.mjs && node games/tests/wordbridge-browser.mjs",
     "dev": "python3 -m http.server 8090 --bind 127.0.0.1",
     "lint": "eslint games/src games/tests eslint.config.mjs"
   },
