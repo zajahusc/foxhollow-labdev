@@ -1,0 +1,17 @@
+import type { Category, Game, Level, Mode, Puzzle, RecordEntry, SavedData, Session, Statistics } from './types.js';
+export declare const utcDay: (date?: Date) => string;
+export declare const previousDay: (day: string) => string;
+export declare const terminal: (s: Session) => boolean;
+export declare function score(level: Level, mistakes: number, hints: number, won: boolean, ruleNamed?: boolean): number;
+export declare function session(puzzle: Puzzle, mode: Mode, day: string, serial: number, nameRule: boolean, maxMistakes?: 3 | 4 | 5): Session;
+export declare function correct(p: Puzzle, answer: string): boolean;
+export declare function submit(current: Session, answer: string): Session;
+export declare function useHint(s: Session): Session;
+export declare function nameRule(s: Session, answer: string): Session;
+export declare function finish(s: Session, won: boolean): Session;
+export declare function reveal(s: Session): Session;
+export declare function record(s: Session): RecordEntry;
+export declare function saveSession(data: SavedData, s: Session): SavedData;
+export declare function statistics(data: SavedData, today?: string): Statistics;
+export declare function practicePuzzle(game: Game, level: Level | 0, category: Category | 'Any', recent: string[], seed: string): Puzzle;
+export declare function share(s: Session, spoilers?: boolean): string;

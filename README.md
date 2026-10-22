@@ -5,3 +5,11 @@ Static website with WordBridge at `/wordbridge/`. Publish this repository root u
 The game uses the bundled WordNet dictionary and daily schedule through June 30, 2027. It needs no API key or backend. The Merriam-Webster backend from the original app is not deployed here. Browser storage keys are preserved for existing progress on the same origin. Scores on other hostnames cannot transfer automatically.
 
 Only public game assets are included; dictionary licenses are in `wordbridge/data/Licenses.txt`.
+
+## Daily puzzle collection
+
+- `/fourthword/`: The Fourth Thing — complete a hidden relationship.
+- `/oddrule/`: The Odd Rule — select the outsider and optionally name its rule.
+- `/games/`: collection page linking all three games.
+
+The two new games use shared TypeScript, build to committed static ES modules, and require no backend. Run `npm ci`, `npm run build`, then `npm run dev`. Verification: `npm run check`, `npm run lint`, `npm test`, and `npm run test:browser` with the local preview running. Full architecture, publication instructions, content counts, limitations and extension guidance are in [games/README.md](games/README.md) and [games/CONTENT.md](games/CONTENT.md).

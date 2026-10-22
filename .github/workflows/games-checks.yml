@@ -1,0 +1,26 @@
+name: Daily games checks
+on:
+  push:
+    paths: ['games/**', 'fourthword/**', 'oddrule/**', 'package*.json', 'tsconfig.json', 'eslint.config.mjs', '.github/workflows/games-checks.yml']
+  pull_request:
+    paths: ['games/**', 'fourthword/**', 'oddrule/**', 'package*.json', 'tsconfig.json', 'eslint.config.mjs', '.github/workflows/games-checks.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run check && npm run lint && npm test
+      - run: git diff --exit-code -- games/build
+      - run: npx playwright install --with-deps chromium
+      - name: Test complete browser journeys
+        run: |
+          python3 -m http.server 8090 --bind 127.0.0.1 > /tmp/games-server.log 2>&1 &
+          curl --retry 10 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8090/fourthword/ > /dev/null
+          npm run test:browser

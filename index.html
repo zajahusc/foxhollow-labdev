@@ -235,6 +235,16 @@
       background: var(--blue);
     }
 
+    .games-preview { padding: 6px 0 70px; }
+    .games-preview h2 { margin: 0 0 26px; font-size: 34px; font-weight: 500; }
+    .game-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    .game-card { text-decoration: none; border: 1px solid var(--line); padding: 26px; display: flex; flex-direction: column; min-height: 220px; transition: background 180ms; }
+    .game-card:hover { background: #e7eae1; }
+    .game-card h3 { margin: 14px 0; font-size: 23px; font-weight: 500; }
+    .game-card p { margin: 0 0 24px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+    .game-card strong { margin-top: auto; font-size: 13px; }
+    @media (max-width: 640px) { .game-cards { grid-template-columns: 1fr; } .games-preview { padding-bottom: 44px; } }
+
     .studio {
       color: var(--paper);
       background: var(--ink);
@@ -330,7 +340,7 @@
       <span class="identity-mark" aria-hidden="true">F.</span>
       <span>Foxhollow Labs</span>
     </a>
-    <a class="nav-link" href="/wordbridge/">Play WordBridge <span aria-hidden="true">↗</span></a>
+    <a class="nav-link" href="/games/">Play our games <span aria-hidden="true">↗</span></a>
   </header>
 
   <main id="top">
@@ -338,14 +348,24 @@
       <div class="hero-copy">
         <div class="eyebrow"><span class="status-dot" aria-hidden="true"></span>Software studio / Apple platforms</div>
         <h1 id="page-title">Foxhollow<br>Labs.</h1>
-        <p class="intro">Useful, thoughtfully made apps for the Apple ecosystem. Meet WordBridge, our daily word game.</p>
-        <a class="hero-link" href="/wordbridge/"><span>Play WordBridge</span><span aria-hidden="true">↘</span></a>
+        <p class="intro">Useful, thoughtfully made apps for the Apple ecosystem. Discover our collection of daily word and logic games.</p>
+        <a class="hero-link" href="/games/"><span>Find your next puzzle</span><span aria-hidden="true">↘</span></a>
       </div>
 
       <div class="visual" role="img" aria-label="Foxhollow Labs F monogram on a geometric technical grid">
         <span class="readout readout-top"><span class="readout-swatch" aria-hidden="true"></span>FOXHOLLOW / 01</span>
         <div class="mark-wrap" aria-hidden="true"><span class="hero-mark">F</span></div>
         <span class="readout readout-bottom">APP STORE / IN DEVELOPMENT</span>
+      </div>
+    </section>
+
+    <section class="games-preview wrap" aria-labelledby="games-heading">
+      <div class="eyebrow">A LITTLE DAILY PLAY</div>
+      <h2 id="games-heading">For curious minds.</h2>
+      <div class="game-cards">
+        <a class="game-card" href="/wordbridge/"><span class="eyebrow">01 / CONNECT</span><h3>WordBridge</h3><p>Two words. You make the link. Build a bridge of synonyms.</p><strong>Play WordBridge ↗</strong></a>
+        <a class="game-card" href="/fourthword/"><span class="eyebrow">02 / DISCOVER</span><h3>The Fourth Thing</h3><p>Three belong together. Find the fourth and uncover the connection.</p><strong>Find the fourth ↗</strong></a>
+        <a class="game-card" href="/oddrule/"><span class="eyebrow">03 / DEDUCE</span><h3>The Odd Rule</h3><p>Five fit the rule. One has other ideas. Spot the outsider.</p><strong>Find the outsider ↗</strong></a>
       </div>
     </section>
 

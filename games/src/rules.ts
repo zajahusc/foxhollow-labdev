@@ -1,0 +1,106 @@
+import type { Category, Level, Rule } from './types.js';
+const letters = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '');
+export const vowelCount = (s: string) => (letters(s).match(/[aeiou]/g) || []).length;
+export const unique = (s: string) => new Set(letters(s)).size === letters(s).length;
+const word = (s: string) => /^[a-z]+$/i.test(s);
+const integer = (s: string) => /^\d+$/.test(s);
+export const prime = (n: number) => {
+  if (!Number.isSafeInteger(n) || n < 2) return false;
+  for (let d = 2; d * d <= n; d++) if (n % d === 0) return false;
+  return true;
+};
+export const digitSum = (s: string) => [...s].reduce((n, c) => n + Number(c), 0);
+const make = (id: string, title: string, category: Category, level: Level, test: (s: string) => boolean,
+  hints: [string, string, string], detail: (s: string) => string, reasoning: string): Rule => ({
+  id, title, category, level, test,
+  hints, explain: s => `${s}: ${detail(s)}. ${test(s) ? 'Matches' : 'Does not match'} the rule.`, reasoning
+});
+const language = (id: string, title: string, level: Level, test: (s: string) => boolean,
+  hints: [string, string, string], detail: (s: string) => string, reasoning: string) =>
+  make(id, title, 'Language', level, s => word(s) && test(letters(s)), hints, detail, reasoning);
+const number = (id: string, title: string, level: Level, test: (n: number, s: string) => boolean,
+  hints: [string, string, string], detail: (s: string) => string, reasoning: string) =>
+  make(id, title, 'Numbers', level, s => integer(s) && test(Number(s), s), hints, detail, reasoning);
+export const rules: Rule[] = [
+  language('palindrome', 'Reads the same backward', 1, s => s === [...s].reverse().join(''),
+    ['Look at the spelling.', 'Try reading in another direction.', 'Reverse the letters and compare.'], s => `backward it is ${[...s].reverse().join('')}`, 'A palindrome preserves its letter order when read backward.'),
+  language('double', 'Contains adjacent identical letters', 1, s => /(.)\1/.test(s),
+    ['Look at the letters, not meanings.', 'Some neighbors are alike.', 'Look for two identical letters side by side.'], s => /(.)\1/i.test(s) ? `contains ${s.match(/(.)\1/i)?.[0]}` : 'has no doubled letter', 'Only neighboring repeated letters count; separated repeats do not.'),
+  language('starts-vowel', 'Starts with A, E, I, O, or U', 1, s => /^[aeiou]/.test(s),
+    ['Focus on one end of each word.', 'The first letter matters.', 'Look for a vowel at the beginning; Y is not counted.'], s => `begins with ${s[0]}`, 'This is a spelling rule, independent of pronunciation.'),
+  language('ends-e', 'Ends with the letter E', 1, s => s.endsWith('e'),
+    ['Look at the edges.', 'Check the last letter.', 'The final letter is E.'], s => `ends with ${s.at(-1)}`, 'Only the last written letter matters, whether it is pronounced or silent.'),
+  language('five', 'Has exactly five letters', 1, s => s.length === 5,
+    ['Ignore meanings.', 'Try counting.', 'Count five letters per word.'], s => `has ${s.length} letters`, 'Letter count is the same even when meanings are unrelated.'),
+  language('no-e', 'Contains no letter E', 2, s => !s.includes('e'),
+    ['Think about what is missing.', 'A very common letter is absent.', 'Look for the absence of E.'], s => s.toLowerCase().includes('e') ? 'contains E' : 'contains no E', 'The rule is an absence, rather than a shared visible letter.'),
+  language('isogram', 'Never repeats a letter', 2, unique,
+    ['Look inside the words.', 'Letters should be distinct.', 'Every letter appears exactly once.'], s => `${new Set(letters(s)).size} distinct letters out of ${s.length}`, 'An isogram uses each written letter at most once.'),
+  language('three-vowels', 'Contains exactly three vowel letters', 2, s => vowelCount(s) === 3,
+    ['Count one kind of letter.', 'Use A, E, I, O, U; do not count Y.', 'There are exactly three written vowels.'], s => `has ${vowelCount(s)} vowels`, 'Count occurrences, including repeated vowels, rather than syllables.'),
+  language('same-ends', 'Starts and ends with the same letter', 2, s => s[0] === s.at(-1),
+    ['Look at the boundaries.', 'Compare the two ends.', 'The first and last letter match.'], s => `begins ${s[0]} and ends ${s.at(-1)}`, 'The middle letters can be completely different.'),
+  language('abc', 'Contains three consecutive alphabet letters in order', 2, s =>
+    [...s].some((_, i) => i + 2 < s.length && s.charCodeAt(i + 1) === s.charCodeAt(i) + 1 && s.charCodeAt(i + 2) === s.charCodeAt(i) + 2),
+    ['Focus on the alphabet.', 'Look for a short run inside each word.', 'Three neighboring letters run forward in the alphabet.'], s => {
+      const run = [...letters(s)].map((_,i) => letters(s).slice(i,i+3)).find(t => t.length===3 && t.charCodeAt(1)===t.charCodeAt(0)+1 && t.charCodeAt(2)===t.charCodeAt(1)+1);
+      return run ? `contains the run ${run}` : 'contains no three-letter alphabet run';
+    }, 'Only consecutive letters in consecutive positions count.'),
+  language('alphabetical', 'Letters are in strictly increasing alphabet order', 3, s => [...s].every((c,i) => i===0 || c > s[i-1]!),
+    ['The alphabet supplies an ordering.', 'Move from left to right.', 'Each letter comes later in the alphabet than the previous letter.'], s => `letters ${[...s].join(' → ')}`, 'No repeated letters or backward steps are allowed.'),
+  language('descending', 'Letters are in strictly decreasing alphabet order', 3, s => [...s].every((c,i) => i===0 || c < s[i-1]!),
+    ['Order matters more than meaning.', 'Think of a backward alphabet.', 'Every letter comes earlier in the alphabet than its neighbor to the left.'], s => `letters ${[...s].join(' → ')}`, 'Every step must move backward in the alphabet.'),
+  language('only-e', 'E is the only vowel letter used', 3, s => s.includes('e') && !/[aiou]/.test(s),
+    ['Listen less; inspect the spelling.', 'Which vowels are present?', 'E must appear; A, I, O and U must not. Y is not counted.'], s => `vowel letters are ${(letters(s).match(/[aeiou]/g)||[]).join(', ') || 'none'}`, 'There can be several Es, but no other A/E/I/O/U vowels.'),
+  language('hidden-one', 'Contains ONE as consecutive letters', 3, s => s.includes('one'),
+    ['A smaller word is hidden inside.', 'The hidden word is a number.', 'Find O, N, E together, in that order.'], s => letters(s).includes('one') ? 'contains ONE' : 'does not contain ONE', 'The hidden number need not be a separate syllable or word.'),
+  language('vowel-edges', 'Begins and ends with a vowel letter', 3, s => /^[aeiou].*[aeiou]$/.test(s),
+    ['Look at both edges.', 'Vowels are important at two positions.', 'The first and last letters must both be A, E, I, O, or U.'], s => `edges are ${s[0]} and ${s.at(-1)}`, 'Interior letters are unrestricted.'),
+  language('alternating', 'Alternates consonant and vowel letters throughout', 4, s => [...s].every((c,i) => i===0 || /[aeiou]/.test(c)!==/[aeiou]/.test(s[i-1]!)),
+    ['Look for a repeating structure.', 'Separate letters into vowels and consonants.', 'Every neighboring pair switches between vowel and consonant. Y counts as a consonant.'], s => [...letters(s)].map(c => /[aeiou]/.test(c)?'V':'C').join(''), 'The pattern can start with either a consonant or a vowel.'),
+  language('top-row', 'Uses only the top QWERTY letter row', 4, s => /^[qwertyuiop]+$/.test(s),
+    ['Think of an everyday tool.', 'Imagine a US QWERTY keyboard.', 'All letters are from Q W E R T Y U I O P.'], s => `letters outside the top row: ${[...new Set(letters(s).replace(/[qwertyuiop]/g,''))].join(', ') || 'none'}`, 'This rule refers specifically to the top letter row of a US QWERTY layout.'),
+  language('roman', 'Uses only Roman-numeral letters', 4, s => /^[ivxlcdm]+$/.test(s),
+    ['Think about letters used as numbers.', 'An ancient notation supplies the alphabet.', 'Every letter must be I, V, X, L, C, D, or M; it need not be a valid numeral.'], s => `letters outside IVXLCDM: ${letters(s).replace(/[ivxlcdm]/g,'') || 'none'}`, 'These are words built from numeral letters, not necessarily well-formed Roman numbers.'),
+  language('vowels-ordered', 'Has at least three vowels, in strictly increasing A–E–I–O–U order', 4, s => {
+    const v=s.match(/[aeiou]/g)||[]; return v.length>=3 && v.every((c,i)=>i===0 || c>v[i-1]!);
+  }, ['Pay attention to vowels.', 'Remove all consonants and compare the remaining order.', 'At least three vowels must appear in strict alphabetical order, with no repeats.'], s => `vowel sequence is ${(letters(s).match(/[aeiou]/g)||[]).join(' → ')}`, 'Skipped vowels are allowed; backward steps and repeated vowels are not.'),
+  language('two-pairs', 'Has exactly two distinct letters, each appearing twice', 4, s => s.length===4 && new Set(s).size===2 && [...new Set(s)].every(c=>[...s].filter(x=>x===c).length===2),
+    ['Count occurrences, not meanings.', 'Only two kinds of letter are allowed.', 'There are four letters: exactly two copies of each of two letters.'], s => [...new Set(letters(s))].map(c=>`${c} × ${[...letters(s)].filter(x=>x===c).length}`).join(', '), 'Arrangement is unrestricted; the two letters do not need to be adjacent.'),
+  language('six-two-unique', 'Has six distinct letters and exactly two vowel letters', 5, s => s.length===6 && unique(s) && vowelCount(s)===2,
+    ['Two counts and a restriction work together.', 'Count letters and vowels, then check repeats.', 'Exactly six letters, exactly two A/E/I/O/U vowels, and no repeated letter.'], s => `${s.length} letters, ${vowelCount(s)} vowels, ${new Set(letters(s)).size} distinct letters`, 'All three conditions must hold simultaneously.'),
+  language('mirror-vowels', 'Its vowel sequence is a palindrome of at least three vowels', 5, s => {
+    const v=(s.match(/[aeiou]/g)||[]).join(''); return v.length>=3 && v===[...v].reverse().join('');
+  }, ['Ignore one class of letters.', 'Keep only A, E, I, O, U and read both ways.', 'There are at least three vowels; their sequence reads identically backward.'], s => `vowel sequence is ${(letters(s).match(/[aeiou]/g)||[]).join('') || '(empty)'}`, 'The whole word need not be a palindrome; only its vowel sequence must mirror.'),
+  language('half-alphabet', 'Uses distinct letters only from A through M', 5, s => /^[a-m]+$/.test(s) && unique(s),
+    ['Two spelling restrictions interact.', 'Divide the alphabet into two halves and check for repeats.', 'All letters come from A–M, with no letter used twice.'], s => `${new Set(letters(s)).size} distinct letters; outside A–M: ${letters(s).replace(/[a-m]/g,'')||'none'}`, 'Both alphabet membership and absence of repeated letters are required.'),
+  language('edge-sum', 'First and last letters have alphabet positions summing to 27', 5, s => s.charCodeAt(0)+s.charCodeAt(s.length-1)-192===27,
+    ['Only the edge letters matter.', 'Use A=1, B=2, …, Z=26.', 'The first and last positions add to 27, like A+Z or B+Y.'], s => `${s.toUpperCase()[0]}=${letters(s).charCodeAt(0)-96}, ${s.toUpperCase().at(-1)}=${letters(s).charCodeAt(s.length-1)-96}`, 'The edge letters are mirror partners in the alphabet.'),
+  language('middle-vowel', 'Has odd length, distinct letters, and a vowel exactly in the middle', 5, s => s.length%2===1 && unique(s) && /[aeiou]/.test(s[Math.floor(s.length/2)]!),
+    ['Length, the center, and repeats all matter.', 'Find the single middle letter, then check the rest.', 'An odd number of distinct letters, with A/E/I/O/U in the center.'], s => `${s.length} letters, ${unique(s)?'no':'some'} repeats; center ${s.length%2 ? s[Math.floor(s.length/2)] : 'lies between letters'}`, 'Odd length gives one center; all letters must also be distinct.'),
+  number('even', 'Is an even integer', 1, n=>n%2===0,
+    ['Think about divisibility.', 'Try splitting into two equal whole-number groups.', 'The number is divisible by 2.'], s => `remainder after division by 2 is ${Number(s)%2}`, 'Even numbers have no remainder when divided by two.'),
+  number('square', 'Is a perfect square', 1, n=>Number.isInteger(Math.sqrt(n)),
+    ['A familiar multiplication pattern.', 'Multiply a whole number by itself.', 'Look for an integer square root.'], s => `square root is ${Number.isInteger(Math.sqrt(Number(s)))?Math.sqrt(Number(s)): 'not a whole number'}`, 'A perfect square equals n × n for a whole number n.'),
+  number('prime', 'Is a prime number', 2, n=>prime(n),
+    ['Think about factors.', 'How many positive divisors are there?', 'Exactly two positive divisors: 1 and the number itself.'], s => prime(Number(s)) ? 'has exactly two positive divisors' : 'does not have exactly two positive divisors', '1 is not prime. A composite number has additional divisors.'),
+  number('power-two', 'Is a positive power of two', 2, n=>n>=2 && Number.isInteger(Math.log2(n)),
+    ['Think about repeated multiplication.', 'Double, then double again.', 'The number equals 2ⁿ for an integer n ≥ 1.'], s => Number.isInteger(Math.log2(Number(s))) ? `2 raised to ${Math.log2(Number(s))}` : 'not a whole positive power of 2', 'Repeated doubling produces 2, 4, 8, 16, and so on.'),
+  number('cube', 'Is a perfect cube', 3, n=>Math.round(Math.cbrt(n))**3===n,
+    ['A three-dimensional multiplication pattern.', 'Use the same factor three times.', 'The number is n × n × n for an integer n.'], s => `cube root is ${Math.round(Math.cbrt(Number(s)))**3===Number(s)? Math.round(Math.cbrt(Number(s))):'not a whole number'}`, 'Perfect cubes are volumes of cubes with integer side lengths.'),
+  number('triangular', 'Is a triangular number', 3, n=>Number.isInteger((Math.sqrt(8*n+1)-1)/2),
+    ['Arrange dots into growing rows.', 'Each next row has one more dot.', 'It equals 1 + 2 + … + n for some whole number n.'], s => {const n=(Math.sqrt(8*Number(s)+1)-1)/2;return Number.isInteger(n)?`1 + 2 + … + ${n} = ${s}`:'cannot be a sum 1 + 2 + … + n';}, 'Triangular numbers count dots arranged in equally spaced triangular rows.'),
+  number('digit-nine', 'Its decimal digits sum to nine', 4, (_n,s)=>digitSum(s)===9,
+    ['Treat numbers as strings of digits.', 'Add the individual digits.', 'The digits must add to exactly 9, not just a multiple of 9.'], s => `${[...s].join(' + ')} = ${digitSum(s)}`, 'This is stricter than being divisible by nine.'),
+  number('square-odd', 'Is both odd and a perfect square', 4, n=>n%2===1 && Number.isInteger(Math.sqrt(n)),
+    ['Two numerical properties must hold.', 'Check parity and roots.', 'It is an odd whole number multiplied by itself.'], s => `${Number(s)%2?'odd':'even'}; square root ${Number.isInteger(Math.sqrt(Number(s)))?'is':'is not'} an integer`, 'Both constraints are required; an even square fails.'),
+  number('prime-reverse', 'It and its reversed decimal digits are distinct primes', 5, (n,s)=>n!==Number([...s].reverse().join('')) && prime(n) && prime(Number([...s].reverse().join(''))),
+    ['Direction and factors both matter.', 'Reverse the decimal digits and check both numbers.', 'Both directions must be prime, and must produce different numbers.'], s => `${s} and ${[...s].reverse().join('')} are ${prime(Number(s))&&prime(Number([...s].reverse().join('')))?'both':'not both'} prime${s===[...s].reverse().join('')?', but are equal':''}`, 'These reversible prime pairs exclude palindromic primes.'),
+  number('square-digit-square', 'It and its digit sum are perfect squares', 5, (n,s)=>Number.isInteger(Math.sqrt(n)) && Number.isInteger(Math.sqrt(digitSum(s))),
+    ['Two related quantities follow the same rule.', 'Inspect the number and the sum of its digits.', 'Both the whole number and its digit sum have integer square roots.'], s => `number ${s}; digit sum ${digitSum(s)}; ${Number.isInteger(Math.sqrt(Number(s)))&&Number.isInteger(Math.sqrt(digitSum(s)))?'both are squares':'at least one is not a square'}`, 'The two square roots can be different.'),
+];
+for(const r of rules)if(['top-row','roman','two-pairs','six-two-unique','half-alphabet','edge-sum','middle-vowel'].includes(r.id))r.category='Structure';
+export const ruleMap = new Map(rules.map(r=>[r.id,r]));
+export function getRule(id: string): Rule {
+  const r=ruleMap.get(id); if(!r) throw new Error(`Unknown rule: ${id}`); return r;
+}
