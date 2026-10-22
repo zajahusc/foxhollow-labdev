@@ -63,8 +63,8 @@ try{
  }
  // Midnight rollover must replace the daily assignment and preserve the old state.
  {
-  const {context,page}=await setup();await page.goto(`${base}/oddrule/`);await page.clock.setSystemTime(new Date('2026-10-22T00:00:01Z'));await page.clock.runFor(1100);await page.waitForFunction(()=>document.querySelector('.edition').textContent.includes('2026-10-22'));
-  const d=await saved(page,'oddrule');assert.ok(d.daily['2026-10-21']);assert.ok(d.daily['2026-10-22']);check('UTC date transition publishes next assignment and retains prior progress');await context.close();
+  const {context,page}=await setup();await page.goto(`${base}/oddrule/`);await page.clock.setSystemTime(new Date('2026-10-22T00:00:01Z'));await page.clock.runFor(1100);assert.ok((await saved(page,'oddrule')).daily['2026-10-21']);assert.equal((await saved(page,'oddrule')).daily['2026-10-22'],undefined);await page.clock.setSystemTime(new Date('2026-10-22T04:00:01Z'));await page.clock.runFor(1100);await page.waitForFunction(()=>document.querySelector('.edition').textContent.includes('2026-10-22'));
+  const d=await saved(page,'oddrule');assert.ok(d.daily['2026-10-21']);assert.ok(d.daily['2026-10-22']);check('New York midnight transition (not UTC midnight) publishes next assignment and retains prior progress');await context.close();
  }
  // Responsive, long words, dark/light, keyboard and reduced-motion checks.
  for(const width of [320,390,768,1440]){

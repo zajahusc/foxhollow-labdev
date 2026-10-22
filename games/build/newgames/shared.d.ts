@@ -1,8 +1,8 @@
-import { utcDay, previousDay } from '../engine.js';
+import { dailyDay, previousDay } from '../engine.js';
 import { normalize, shuffle } from '../data.js';
 import type { Level } from '../types.js';
 import type { NewGame, NewSession, Save, WeavePuzzle } from './types.js';
-export { utcDay, previousDay, normalize, shuffle };
+export { dailyDay, previousDay, normalize, shuffle };
 export declare const names: Record<NewGame, string>;
 export declare const levels: string[];
 export declare const storageKey: (game: NewGame) => string;

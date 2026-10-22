@@ -1,5 +1,6 @@
+import {nextDailyReset} from './time.js';
 import { bank, validateBank } from './data.js';
-import { correct, nameRule, practicePuzzle, reveal, saveSession, session, share, statistics, submit, terminal, useHint, utcDay } from './engine.js';
+import { correct, nameRule, practicePuzzle, reveal, saveSession, session, share, statistics, submit, terminal, useHint, dailyDay } from './engine.js';
 import { dailyPuzzle } from './schedule.js';
 import { empty, key, load, store } from './storage.js';
 import type { Category, Game, Level, Mode, SavedData, Session } from './types.js';
@@ -20,7 +21,7 @@ function select<T extends string>(name:string,options:{value:T;text:string}[],va
 }
 let data:SavedData;try{data=load(game,localStorage);}catch{data=empty();}
 let mode:Mode='daily',current:Session|null=null,filterLevel:Level|0=0,filterCategory:Category|'Any'='Any';
-let dailyViewedDay=utcDay();
+let dailyViewedDay=dailyDay();
 let notice='',storageWarned=false,noticeTimeout:ReturnType<typeof setTimeout>|undefined;
 function notify(message:string){toast.textContent=message;toast.classList.add('show');clearTimeout(noticeTimeout);noticeTimeout=setTimeout(()=>toast.classList.remove('show'),5000);}
 function persist(){let ok=false;try{ok=store(game,data,localStorage);}catch{/* Some browsers deny access to storage itself. Keep the active visit playable. */}if(!ok&&!storageWarned){storageWarned=true;notify('Browser storage is unavailable. Progress lasts for this visit.');}}
@@ -32,7 +33,7 @@ function update(next:Session){
  current=next;data=saveSession(data,next);persist();render();
 }
 function getDaily(){
- const day=utcDay(),saved=data.daily[day];dailyViewedDay=day;
+ const day=dailyDay(),saved=data.daily[day];dailyViewedDay=day;
  if(saved){current=saved;return;}
  const p=dailyPuzzle(game,day);if(!p){current=null;return;}
  current=session(p,'daily',day,0,data.settings.nameRule);data=saveSession(data,current);persist();
@@ -44,7 +45,7 @@ function startPractice(force=false){
  try{
   data.practiceSerial++;const seed=`${game}:${data.practiceSerial}:${Date.now()}`;
   const p=practicePuzzle(game,filterLevel,filterCategory,data.recent,seed);
-  current=session(p,'practice',utcDay(),data.practiceSerial,data.settings.nameRule,data.settings.maxMistakes);
+  current=session(p,'practice',dailyDay(),data.practiceSerial,data.settings.nameRule,data.settings.maxMistakes);
   data=saveSession(data,current);persist();notice='';render();
  }catch(e){notify(e instanceof Error?e.message:'Could not start a puzzle.');}
 }
@@ -74,7 +75,7 @@ function instructions(){
   'Turn on Name the Rule in settings before your first move for a second step and a possible bonus.'
  ];for(const t of items)list.append($('li',t));
  openModal('A little way to play.',[list,$('h3','Every point explained'),$('p','Base score is 100 × difficulty level. Each wrong guess costs 15% of the original base. Hints cost 10%, 15%, then 20% of base. There is no time penalty, and scores stop at zero.'),
- $('p',fourth?'A reveal or exhausted attempts scores zero.':'Correctly naming the rule adds 25% of base. A wrong rule choice costs 15% of base; you still complete the puzzle. Reveals score zero.'),$('h3','One day. One shared puzzle.'),$('p','Daily resets at 00:00 UTC. Everyone gets the same published assignment. Your first completed daily score is saved. Practice has separate progress and never changes your streak.'),$('p','Spelling rules count A, E, I, O and U as vowels; Y is a consonant. Word meanings do not determine the spelling puzzles. Answers and rules are checked against the published rule catalog, not every possible interpretation.')]);
+ $('p',fourth?'A reveal or exhausted attempts scores zero.':'Correctly naming the rule adds 25% of base. A wrong rule choice costs 15% of base; you still complete the puzzle. Reveals score zero.'),$('h3','One day. One shared puzzle.'),$('p','Daily resets at midnight New York time. Everyone gets the same published assignment. Your first completed daily score is saved. Practice has separate progress and never changes your streak.'),$('p','Spelling rules count A, E, I, O and U as vowels; Y is a consonant. Word meanings do not determine the spelling puzzles. Answers and rules are checked against the published rule catalog, not every possible interpretation.')]);
 }
 function settings(){
  const theme=select('Color theme',[{value:'system',text:'Follow device'},{value:'light',text:'Light'},{value:'dark',text:'Dark'}],data.settings.theme,v=>{data.settings.theme=v;persist();applyTheme();});
@@ -106,25 +107,25 @@ function showStats(){
  for(const [name,value]of entries){const box=$('div');box.append($('strong',String(value)),$('span',name));grid.append(box);}
  const table=$('table'),caption=$('caption','By difficulty'),head=$('tr');for(const h of ['Difficulty','Finished','Wins','Points'])head.append($('th',h));table.append(caption,head);
  for(const row of s.byLevel){const tr=$('tr');for(const text of [levels[row.level-1]!,row.played,row.wins,row.points])tr.append($('td',String(text)));table.append(tr);}
- openModal('A record of small discoveries.',[grid,table,$('p','Win rate and averages use finished puzzles. Attempts include unfinished puzzles. Daily streaks count successful daily solves only, once per UTC date.','muted')]);
+ openModal('A record of small discoveries.',[grid,table,$('p','Win rate and averages use finished puzzles. Attempts include unfinished puzzles. Daily streaks count successful daily solves only, once per New York date.','muted')]);
 }
 function applyTheme(){document.documentElement.dataset.theme=data.settings.theme;}
 function nextCountdown(){
  const el=document.getElementById('countdown');if(!el)return;
- const now=new Date(),next=Date.parse(utcDay(now)+'T00:00:00Z')+86400000;
+ const now=new Date(),next=nextDailyReset(now);
  const left=Math.max(0,Math.floor((next-now.getTime())/1000));
  const h=String(Math.floor(left/3600)).padStart(2,'0'),m=String(Math.floor(left%3600/60)).padStart(2,'0'),s=String(left%60).padStart(2,'0');
- el.textContent=`Next daily in ${h}:${m}:${s} · 00:00 UTC`;
+ el.textContent=`Next daily in ${h}:${m}:${s} · midnight New York time`;
 }
 function rollover(){
- if(mode==='daily'&&dailyViewedDay!==utcDay()){
+ if(mode==='daily'&&dailyViewedDay!==dailyDay()){
   const wasActive=current&&!terminal(current);
-  notice=wasActive?'A new UTC day has begun. Your unfinished prior-day progress remains saved; this is today’s puzzle.':'A fresh daily puzzle is ready.';
+  notice=wasActive?'A new day in New York has begun. Your unfinished prior-day progress remains saved; this is today’s puzzle.':'A fresh daily puzzle is ready.';
   getDaily();render();
  }
 }
 function lock(answer:string){
- if(!current)return;const originalDay=current.day;rollover();if(!current||mode==='daily'&&current.day!==originalDay){notify('A new UTC daily puzzle has started. Please choose again.');return;}
+ if(!current)return;const originalDay=current.day;rollover();if(!current||mode==='daily'&&current.day!==originalDay){notify('A new daily puzzle has started. Please choose again.');return;}
  const before=current;const next=submit(current,answer);
  if(next===before){notify('Choose a new answer before locking it in.');return;}
  notice=correct(next.puzzle,answer)?'':`Not quite. ${next.maxMistakes-next.guesses.length} ${next.maxMistakes-next.guesses.length===1?'attempt':'attempts'} remaining. Try a hint or another answer.`;
@@ -221,7 +222,7 @@ function render(){
   edition.append(left,$('span',`${levels[current.puzzle.level-1]} · ${current.puzzle.category}`,'difficulty'));board.append(edition);
   if(current.phase==='playing')renderPlaying(current,board);else if(current.phase==='naming')renderNaming(current,board);else renderResult(current,board);
  }else{
-  board.append($('h2','The next chapter is being prepared.'),$('p','There is no published daily assignment for this UTC date. Unlimited practice is available.'),button('Play practice',()=>switchMode('practice'),'primary'));
+  board.append($('h2','The next chapter is being prepared.'),$('p','There is no published daily assignment for this New York date. Unlimited practice is available.'),button('Play practice',()=>switchMode('practice'),'primary'));
  }
  content.append(board);
  const foot=$('footer','','game-footer'),count=$('p','','countdown');count.id='countdown';

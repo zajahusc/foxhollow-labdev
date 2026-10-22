@@ -1,12 +1,12 @@
-import { utcDay, previousDay } from '../engine.js';
+import { dailyDay, previousDay } from '../engine.js';
 import { hash, normalize, shuffle } from '../data.js';
-export { utcDay, previousDay, normalize, shuffle };
+export { dailyDay, previousDay, normalize, shuffle };
 export const names = { semanticgravity: 'Semantic Gravity', wordweave: 'Word Weave' };
 export const levels = ['Easy', 'Normal', 'Hard', 'Expert', 'Master'];
 export const storageKey = (game) => `foxhollow.${game}.v1`;
 export function blankSave() { return { version: 1, daily: {}, practice: null, records: [], attempted: [], recent: [], serial: 0, theme: 'system', dailyLimit: null, feedback: [] }; }
 export function initial(game, id, level, mode, serial, puzzle, limit = null) {
-    const day = utcDay(), base = { key: mode === 'daily' ? `daily:${day}` : `practice:${serial}`, game, mode, day, level, phase: 'playing', started: Date.now(), finished: null, score: 0, guesses: [], mistakes: 0, hints: 0 };
+    const day = dailyDay(), base = { key: mode === 'daily' ? `daily:${day}` : `practice:${serial}`, game, mode, day, level, phase: 'playing', started: Date.now(), finished: null, score: 0, guesses: [], mistakes: 0, hints: 0 };
     if (game === 'semanticgravity')
         return { ...base, game, puzzleId: id, ranks: [], limit: mode === 'practice' ? null : limit || [25, 20, 15, 12, 10][level - 1] };
     if (!puzzle)
@@ -71,7 +71,7 @@ export function commit(d, s) {
         records.push({ key: s.key, puzzleId: puzzleId(s), mode: s.mode, day: s.day, won: s.phase === 'solved', level: s.level, score: s.score, guesses: s.guesses.length, mistakes: s.mistakes, hints: s.hints, seconds: Math.max(0, Math.round(((s.finished || Date.now()) - s.started) / 1000)) });
     return { ...d, daily: s.mode === 'daily' ? { ...d.daily, [s.day]: s } : d.daily, practice: s.mode === 'practice' ? s : d.practice, records, attempted: d.attempted.includes(s.key) ? d.attempted : [...d.attempted, s.key], recent: done ? [puzzleId(s), ...(s.game === 'wordweave' ? ['grid-' + hash(s.puzzle.layout + '|' + s.puzzle.solution)] : []), ...d.recent.filter(id => id !== puzzleId(s))].slice(0, 200) : d.recent };
 }
-export function statistics(d, today = utcDay()) {
+export function statistics(d, today = dailyDay()) {
     const wins = d.records.filter(r => r.won), days = [...new Set(wins.filter(r => r.mode === 'daily').map(r => r.day))].sort();
     let longest = 0, run = 0, prev = '';
     for (const day of days) {

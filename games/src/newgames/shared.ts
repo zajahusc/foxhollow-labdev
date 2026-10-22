@@ -1,14 +1,14 @@
-import {utcDay,previousDay} from '../engine.js';
+import {dailyDay,previousDay} from '../engine.js';
 import {hash,normalize,shuffle} from '../data.js';
 import type {Level} from '../types.js';
 import type {NewGame,NewSession,Save,Result,GravitySession,WeaveSession,WeavePuzzle} from './types.js';
-export {utcDay,previousDay,normalize,shuffle};
+export {dailyDay,previousDay,normalize,shuffle};
 export const names:Record<NewGame,string>={semanticgravity:'Semantic Gravity',wordweave:'Word Weave'};
 export const levels=['Easy','Normal','Hard','Expert','Master'];
 export const storageKey=(game:NewGame)=>`foxhollow.${game}.v1`;
 export function blankSave():Save{return {version:1,daily:{},practice:null,records:[],attempted:[],recent:[],serial:0,theme:'system',dailyLimit:null,feedback:[]};}
 export function initial(game:NewGame,id:string,level:Level,mode:'daily'|'practice',serial:number,puzzle?:WeavePuzzle,limit:number|null=null):NewSession{
- const day=utcDay(),base={key:mode==='daily'?`daily:${day}`:`practice:${serial}`,game,mode,day,level,phase:'playing' as const,started:Date.now(),finished:null,score:0,guesses:[],mistakes:0,hints:0};
+ const day=dailyDay(),base={key:mode==='daily'?`daily:${day}`:`practice:${serial}`,game,mode,day,level,phase:'playing' as const,started:Date.now(),finished:null,score:0,guesses:[],mistakes:0,hints:0};
  if(game==='semanticgravity')return {...base,game,puzzleId:id,ranks:[],limit:mode==='practice'?null:limit||[25,20,15,12,10][level-1]!} satisfies GravitySession;
  if(!puzzle)throw Error('A verified Weave grid is required.');
  return {...base,game,puzzle,letters:puzzle.givens,notes:{},past:[],future:[],selected:puzzle.givens.indexOf('.'),pencil:false,hintsByType:[0,0,0],hintLetters:{},feedback:false} satisfies WeaveSession;
@@ -41,7 +41,7 @@ export function commit(d:Save,s:NewSession):Save{
  if(done&&!records.some(x=>x.key===s.key))records.push({key:s.key,puzzleId:puzzleId(s),mode:s.mode,day:s.day,won:s.phase==='solved',level:s.level,score:s.score,guesses:s.guesses.length,mistakes:s.mistakes,hints:s.hints,seconds:Math.max(0,Math.round(((s.finished||Date.now())-s.started)/1000))} as Result);
  return {...d,daily:s.mode==='daily'?{...d.daily,[s.day]:s}:d.daily,practice:s.mode==='practice'?s:d.practice,records,attempted:d.attempted.includes(s.key)?d.attempted:[...d.attempted,s.key],recent:done?[puzzleId(s),...(s.game==='wordweave'?['grid-'+hash(s.puzzle.layout+'|'+s.puzzle.solution)]:[]),...d.recent.filter(id=>id!==puzzleId(s))].slice(0,200):d.recent};
 }
-export function statistics(d:Save,today=utcDay()){
+export function statistics(d:Save,today=dailyDay()){
  const wins=d.records.filter(r=>r.won),days=[...new Set(wins.filter(r=>r.mode==='daily').map(r=>r.day))].sort();let longest=0,run=0,prev='';
  for(const day of days){run=previousDay(day)===prev?run+1:1;longest=Math.max(run,longest);prev=day;}
  let streak=0,day=days.includes(today)?today:previousDay(today);while(days.includes(day)){streak++;day=previousDay(day);}

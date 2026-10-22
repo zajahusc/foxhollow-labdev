@@ -25,7 +25,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-The browser runner accepts `GAMES_TEST_URL`; its default is `http://127.0.0.1:8090`. It freezes the browser clock at the schedule's first UTC day for repeatable tests. Screenshots go to `/tmp/fourthword-*.png` and `/tmp/oddrule-*.png`. CI checks types, lint, all published assignments, generators and complete browser journeys, then checks committed compiled output for drift.
+The browser runner accepts `GAMES_TEST_URL`; its default is `http://127.0.0.1:8090`. It freezes the browser clock at the schedule's first New York day for repeatable tests. Screenshots go to `/tmp/fourthword-*.png` and `/tmp/oddrule-*.png`. CI checks types, lint, all published assignments, generators and complete browser journeys, then checks committed compiled output for drift.
 
 ## Architecture
 
@@ -55,7 +55,7 @@ Semantic, scientific, geographic and cultural puzzles are intentionally not in t
 
 Base points = 100 × level. Each wrong answer costs 15% of **original** base; hints cost 10%, 15%, 20% cumulatively. No timer penalty. Name the Rule adds 25% of base for a correct rule or subtracts 15% for a wrong rule. Reveal/failure earns zero; the floor is zero. Daily allows 3 wrong guesses; practice settings allow 3–5 for the next puzzle. Completed daily records cannot be overwritten by normal replay. Native sharing falls back to clipboard, then a selectable copy dialog; default shares omit solutions.
 
-Each game has a separate `foxhollow.<game>.v1` localStorage key. Daily records, active practice (including rule-naming), attempted IDs, recent completed IDs, settings and explicitly local feedback persist. Statistics include finished wins/failures; attempted counts include unfinished games. A successful UTC daily solve advances the streak once. Yesterday's streak remains visible until today's deadline; a missed UTC day resets it. Practice never affects streaks. Progress is browser-local; there is no account or device sync.
+Each game has a separate `foxhollow.<game>.v1` localStorage key. Daily records, active practice (including rule-naming), attempted IDs, recent completed IDs, settings and explicitly local feedback persist. Statistics include finished wins/failures; attempted counts include unfinished games. A successful New York daily solve advances the streak once. Yesterday's streak remains visible until today's deadline; a missed UTC day resets it. Practice never affects streaks. Progress is browser-local; there is no account or device sync.
 
 ## Practice and content limits
 
@@ -66,3 +66,5 @@ See [CONTENT.md](CONTENT.md) for counts and the release shortfall. There is no c
 ## Future backend
 
 Replace the `StorageAdapter` with an authenticated service and preserve engine/record contracts. Serve frozen daily IDs, perform server-side answer validation and merge first-completion records there. Static client answers can be inspected deliberately; this release does not claim anti-cheat protection. Feedback is explicitly local and is not transmitted. Add licensed dictionary/reference-backed content and an editorial workflow before widening semantic categories. Offline service-worker caching, accounts, cross-device sync, Daily Double and adaptive difficulty are deferred.
+
+All daily games reset at midnight in America/New_York, including daylight saving time. Countdown and streak dates use that same timezone. Existing date-keyed progress stays saved.

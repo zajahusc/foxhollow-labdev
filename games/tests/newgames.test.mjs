@@ -8,7 +8,7 @@ import {weaveBank} from '../build/newgames/weave-bank.js';
 import {crosswordBank} from '../build/newgames/crossword-bank.js';
 import {dictionary,dictionaryVersion} from '../build/newgames/dictionary.js';
 import {solve,slots,counts,validateWeave,checkGrid,editCell,undo,redo,submitWeave,weaveScore,makeWeave} from '../build/newgames/weave.js';
-import {initial,blankSave,commit,decode,giveUp,statistics,resultText,utcDay} from '../build/newgames/shared.js';
+import {initial,blankSave,commit,decode,giveUp,statistics,resultText,dailyDay} from '../build/newgames/shared.js';
 import {newSchedule} from '../build/newgames/schedule.js';
 const vocabulary=JSON.parse(readFileSync('games/data/gravity-v1.json','utf8'));
 const raw=readFileSync('games/data/gravity-v1.f32');
@@ -84,7 +84,7 @@ test('New game publication schedule resolves all 730 assignments without implici
 });
 test('Shared saves: separate games, corrupt data and immutable first completed daily score',()=>{
  const p=gravityTargets[0],r=rank(trained,p);let state=initial('semanticgravity',p.id,p.level,'daily',0);state=gravityGuess(state,p,r,r.ordered[2]).session;let data=commit(blankSave(),state);assert.deepEqual(decode(JSON.stringify(data),'semanticgravity'),data);
- assert.equal(decode(JSON.stringify(data),'wordweave').daily[utcDay()],undefined);assert.deepEqual(decode('{bad','semanticgravity'),blankSave());state=gravityGuess(state,p,r,p.word).session;data=commit(data,state);assert.equal(data.records.length,1);assert.equal(commit(data,giveUp(initial('semanticgravity',p.id,p.level,'daily',0))).records[0].score,data.records[0].score);assert.equal(statistics(data).streak,1);assert.ok(!resultText(state).includes(p.word));
+ assert.equal(decode(JSON.stringify(data),'wordweave').daily[dailyDay()],undefined);assert.deepEqual(decode('{bad','semanticgravity'),blankSave());state=gravityGuess(state,p,r,p.word).session;data=commit(data,state);assert.equal(data.records.length,1);assert.equal(commit(data,giveUp(initial('semanticgravity',p.id,p.level,'daily',0))).records[0].score,data.records[0].score);assert.equal(statistics(data).streak,1);assert.ok(!resultText(state).includes(p.word));
 });
 test('Weave progress with notes/history round-trips safely; reveal earns zero',()=>{
  const p=weaveBank[0];let s=initial('wordweave',p.id,p.level,'daily',0,p);s=editCell({...s,pencil:true},s.selected,'e');const saved=commit(blankSave(),s);assert.deepEqual(decode(JSON.stringify(saved),'wordweave'),saved);assert.equal(giveUp(s).score,0);assert.equal(giveUp(s).phase,'failed');

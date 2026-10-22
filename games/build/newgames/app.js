@@ -1,3 +1,4 @@
+import { nextDailyReset } from '../time.js';
 import { hash } from '../data.js';
 import { gravityTargets } from './targets.js';
 import { loadGravity, rank, gravityGuess, gravityHint, temperature, neighborHints } from './gravity.js';
@@ -6,12 +7,12 @@ import { crosswordBank } from './crossword-bank.js';
 import { slots, counts, dimensions, editCell, undo, redo, submitWeave, validateWeave } from './weave.js';
 import { renderCrossword, currentRun } from './crossword-ui.js';
 import { newSchedule } from './schedule.js';
-import { blankSave, commit, decode, giveUp, initial, levels, names, normalize, resultText, shuffle, statistics, storageKey, utcDay } from './shared.js';
+import { blankSave, commit, decode, giveUp, initial, levels, names, normalize, resultText, shuffle, statistics, storageKey, dailyDay } from './shared.js';
 import { el, button, link, select, label, modal, closeModal, confirm, notify, share, copy } from './ui.js';
 const game = document.body.dataset.game === 'semanticgravity' ? 'semanticgravity' : 'wordweave';
 const app = document.getElementById('app');
 let save = blankSave(), s = null, mode = 'daily', filterLevel = 2, filterTopic = 'Any', gridSize = 7, weaveMode = 'crossword';
-let message = '', busy = false, storageBlocked = false, viewedDay = utcDay();
+let message = '', busy = false, storageBlocked = false, viewedDay = dailyDay();
 let gravityModel = null, ranking = null, rankingId = '', modelError = '';
 let worker = null, requestNumber = 0;
 const pending = new Map();
@@ -61,7 +62,7 @@ function hydrate(candidate) {
     return candidate;
 }
 function daily() {
-    const day = utcDay();
+    const day = dailyDay();
     viewedDay = day;
     const assignment = newSchedule[day]?.[game];
     if (save.daily[day]?.game === 'wordweave' && assignment && save.daily[day].phase === 'playing') {
@@ -162,9 +163,9 @@ function switchMode(next) {
     }
     render();
 }
-function rollover() { if (mode === 'daily' && viewedDay !== utcDay()) {
+function rollover() { if (mode === 'daily' && viewedDay !== dailyDay()) {
     daily();
-    message = 'A new UTC daily puzzle is ready. Your previous progress remains saved.';
+    message = 'A new daily puzzle is ready. Your previous progress remains saved.';
     rankingId = '';
     render();
 } }
@@ -187,7 +188,7 @@ function showStats() { const stats = statistics(save), grid = el('div', '', 'sta
     const box = el('div');
     box.append(el('strong', String(v)), el('span', k));
     grid.append(box);
-} modal('A record of small discoveries.', [grid, el('p', 'Finished includes solves and reveals. Streaks count successful UTC daily solves only, once per date. Practice does not affect daily streaks.', 'muted')]); }
+} modal('A record of small discoveries.', [grid, el('p', 'Finished includes solves and reveals. Streaks count successful New York daily solves only, once per date. Practice does not affect daily streaks.', 'muted')]); }
 function tutorial() {
     if (game === 'wordweave') {
         modal('Word Weave', [el('p', 'Fill the numbered Across and Down answers. Select a clue or cell, then type. Press Space or click a crossing again to switch direction; use the arrow keys to move.'), el('p', 'There are no automatic correctness marks. Check, reveal and pencil tools are available under Options when you want them. Submit when the crossword is complete.')]);
@@ -201,7 +202,7 @@ function tutorial() {
             feedback.textContent = 'Loading the semantic model. Please try again shortly.';
             void ensureModel();
             return;
-        } const r = rank(gravityModel, target), position = r.ranks.get(normalize(input.value)); feedback.textContent = position ? `Rank #${position} of ${r.ordered.length} · ${temperature(position, r.ordered.length)}` : 'Outside the supported vocabulary. No attempt used.'; }), feedback, el('h3', 'Scoring'), el('p', '1,000 base points. A valid wrong guess costs 20. Hints cost 100, 150, then 200. Unknown and repeated guesses cost nothing. Daily resets at 00:00 UTC.')]);
+        } const r = rank(gravityModel, target), position = r.ranks.get(normalize(input.value)); feedback.textContent = position ? `Rank #${position} of ${r.ordered.length} · ${temperature(position, r.ordered.length)}` : 'Outside the supported vocabulary. No attempt used.'; }), feedback, el('h3', 'Scoring'), el('p', '1,000 base points. A valid wrong guess costs 20. Hints cost 100, 150, then 200. Unknown and repeated guesses cost nothing. Daily resets at midnight New York time.')]);
 }
 async function ensureModel() {
     if (gravityModel || busy && game !== 'semanticgravity')
@@ -513,7 +514,7 @@ function render() {
     board.setAttribute('aria-label', 'Puzzle');
     board.setAttribute('aria-busy', String(busy));
     if (!s) {
-        board.append(el('h2', busy ? 'Preparing a verified puzzle…' : 'The next chapter is being prepared.'), el('p', busy ? 'The solver is working in the background.' : 'No daily assignment is published for this UTC date. Practice remains available.'), button('Play practice', () => switchMode('practice'), 'primary'));
+        board.append(el('h2', busy ? 'Preparing a verified puzzle…' : 'The next chapter is being prepared.'), el('p', busy ? 'The solver is working in the background.' : 'No daily assignment is published for this New York date. Practice remains available.'), button('Play practice', () => switchMode('practice'), 'primary'));
     }
     else {
         const edition = el('div', '', 'edition');
@@ -547,7 +548,7 @@ function render() {
         document.getElementById(focus)?.focus({ preventScroll: true });
 }
 function countdown() { const node = document.getElementById('countdown'); if (!node)
-    return; const left = Math.max(0, Math.floor((Date.parse(utcDay() + 'T00:00:00Z') + 86400000 - Date.now()) / 1000)); node.textContent = `Next daily in ${String(Math.floor(left / 3600)).padStart(2, '0')}:${String(Math.floor(left % 3600 / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')} · 00:00 UTC`; }
+    return; const left = Math.max(0, Math.floor((nextDailyReset() - Date.now()) / 1000)); node.textContent = `Next daily in ${String(Math.floor(left / 3600)).padStart(2, '0')}:${String(Math.floor(left % 3600 / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')} · midnight New York time`; }
 document.addEventListener('keydown', e => {
     if (s?.game !== 'wordweave' || s.phase !== 'playing' || busy || document.getElementById('dialog').open)
         return;

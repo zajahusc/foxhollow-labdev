@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {bank,normalize,validateBank,validatePuzzle,generate,shuffle} from '../build/data.js';
 import {getRule,rules,prime} from '../build/rules.js';
-import {correct,finish,nameRule,practicePuzzle,previousDay,record,reveal,saveSession,score,session,share,statistics,submit,terminal,useHint,utcDay} from '../build/engine.js';
+import {correct,finish,nameRule,practicePuzzle,previousDay,record,reveal,saveSession,score,session,share,statistics,submit,terminal,useHint,dailyDay} from '../build/engine.js';
 import {deserialize,empty,load,store} from '../build/storage.js';
 import {dailyPuzzle,schedule} from '../build/schedule.js';
 const fourth=bank.find(p=>p.game==='fourthword'&&p.answerMode==='choice');
@@ -53,8 +53,8 @@ test('wrong rule still completes with one base-score penalty and no bonus',()=>{
 test('rules cannot be guessed until outsider found; strangers cannot be submitted',()=>{
  const s=start(odd);assert.equal(nameRule(s,odd.relationship),s);assert.equal(submit(s,'not on any card'),s);assert.equal(submit(start(),'' ).guesses.length,0);
 });
-test('UTC boundaries are independent of local offset and include leap dates',()=>{
- assert.equal(utcDay(new Date('2026-10-21T23:59:59-05:00')),'2026-10-22');assert.equal(previousDay('2028-03-01'),'2028-02-29');
+test('New York daily boundaries are independent of local offset and include leap dates',()=>{
+ assert.equal(dailyDay(new Date('2026-10-21T23:59:59-05:00')),'2026-10-22');assert.equal(previousDay('2028-03-01'),'2028-02-29');
 });
 test('explicit daily assignments remain stable and schedule ends honestly',()=>{
  for(const game of ['fourthword','oddrule']){

@@ -1,6 +1,6 @@
 import { bank, generate, hash, normalize, shuffle, validatePuzzle } from './data.js';
-export const utcDay = (date = new Date()) => date.toISOString().slice(0, 10);
-export const previousDay = (day) => utcDay(new Date(Date.parse(day + 'T00:00:00Z') - 86400000));
+import { dailyDay, previousDay } from './time.js';
+export { dailyDay, previousDay } from './time.js';
 export const terminal = (s) => s.phase === 'solved' || s.phase === 'failed';
 export function score(level, mistakes, hints, won, ruleNamed = false) {
     if (!won)
@@ -63,7 +63,7 @@ export function saveSession(data, s) {
         attempted: data.attempted.includes(s.key) ? data.attempted : [...data.attempted, s.key], records,
         recent: terminal(s) ? [s.puzzle.id, ...data.recent.filter(id => id !== s.puzzle.id)].slice(0, 100) : data.recent };
 }
-export function statistics(data, today = utcDay()) {
+export function statistics(data, today = dailyDay()) {
     const r = data.records, wins = r.filter(x => x.won), days = [...new Set(wins.filter(x => x.mode === 'daily').map(x => x.day))].sort();
     let longest = 0, run = 0, previous = '';
     for (const day of days) {

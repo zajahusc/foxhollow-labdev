@@ -11,3 +11,7 @@ WordBridge now shares the collection header, navigation, typography, cards, them
 Validation: strict TypeScript, lint, 40 automated engine/data tests and 45 browser checks pass. Browser coverage includes complete Normal and Hard WordBridge games, score equivalence with the original engine, saved-game recovery, crossword completion, optional tools, touch entry, dark mode and viewport widths from 320 to 1440 pixels.
 
 Run `npm run check`, `npm run lint`, `npm test` and (with the local preview running) `npm run test:browser`. Compiled browser modules in `games/build/` are committed for GitHub Pages.
+
+## Daily timezone update
+
+Every game now uses midnight America/New_York for daily puzzle selection, rollover and streak dates. Countdown calculations respect the 23-hour and 25-hour daylight saving days. Existing date-keyed progress and records remain saved. WordBridge already used this timezone.

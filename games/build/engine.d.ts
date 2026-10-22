@@ -1,6 +1,5 @@
 import type { Category, Game, Level, Mode, Puzzle, RecordEntry, SavedData, Session, Statistics } from './types.js';
-export declare const utcDay: (date?: Date) => string;
-export declare const previousDay: (day: string) => string;
+export { dailyDay, previousDay } from './time.js';
 export declare const terminal: (s: Session) => boolean;
 export declare function score(level: Level, mistakes: number, hints: number, won: boolean, ruleNamed?: boolean): number;
 export declare function session(puzzle: Puzzle, mode: Mode, day: string, serial: number, nameRule: boolean, maxMistakes?: 3 | 4 | 5): Session;

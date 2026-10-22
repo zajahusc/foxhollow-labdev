@@ -1,7 +1,7 @@
 import { bank, generate, hash, normalize, shuffle, validatePuzzle } from './data.js';
 import type { Category, Game, Level, Mode, Puzzle, RecordEntry, SavedData, Session, Statistics } from './types.js';
-export const utcDay=(date=new Date())=>date.toISOString().slice(0,10);
-export const previousDay=(day:string)=>utcDay(new Date(Date.parse(day+'T00:00:00Z')-86400000));
+import {dailyDay,previousDay} from './time.js';
+export {dailyDay,previousDay} from './time.js';
 export const terminal=(s:Session)=>s.phase==='solved'||s.phase==='failed';
 export function score(level:Level,mistakes:number,hints:number,won:boolean,ruleNamed=false):number {
  if(!won)return 0;
@@ -51,7 +51,7 @@ export function saveSession(data:SavedData,s:Session):SavedData {
   attempted:data.attempted.includes(s.key)?data.attempted:[...data.attempted,s.key], records,
   recent:terminal(s)?[s.puzzle.id,...data.recent.filter(id=>id!==s.puzzle.id)].slice(0,100):data.recent};
 }
-export function statistics(data:SavedData,today=utcDay()):Statistics {
+export function statistics(data:SavedData,today=dailyDay()):Statistics {
  const r=data.records,wins=r.filter(x=>x.won),days=[...new Set(wins.filter(x=>x.mode==='daily').map(x=>x.day))].sort();
  let longest=0,run=0,previous='';for(const day of days){run=previousDay(day)===previous?run+1:1;longest=Math.max(longest,run);previous=day;}
  let streak=0,day=days.includes(today)?today:previousDay(today);while(days.includes(day)){streak++;day=previousDay(day);}
