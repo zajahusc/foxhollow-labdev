@@ -1,3 +1,6 @@
+import { createGameNavigation } from '../navigation.js';
+import { resultCopy, answerCard } from '../result-presentation.js';
+import { moveText } from './moves.js';
 import { readHard, writeHard } from '../daily-options.js';
 import { dailyDay, nextDailyReset } from '../time.js';
 import { el, button, link, label, select, modal, confirm, share, notify } from '../newgames/ui.js';
@@ -133,10 +136,13 @@ function resultView(parent) {
     if (!session)
         return;
     const s = session, p = s.puzzle;
-    const title = el('h2', s.phase === 'solved' ? 'Correct! You solved it.' : s.phase === 'lost' ? 'The answer, uncovered.' : 'The full picture.', 'result-title');
+    const copy = resultCopy(s.phase === 'solved' ? 'solved' : s.phase === 'lost' ? 'failed' : 'revealed');
+    const title = el('h2', copy.heading, 'result-title');
     title.id = 'result-heading';
     title.tabIndex = -1;
-    parent.append(el('p', `${s.score} POINTS · ${s.hints} HINTS · ${s.mistakes} MISSES`, 'eyebrow'), title);
+    parent.append(el('p', `${s.score} POINTS · ${s.hints} HINTS · ${s.mistakes} MISSES`, 'eyebrow'), title, el('p', copy.message, 'result-message'));
+    const answer = p.game === 'lexiconlock' ? p.word.toUpperCase() : p.game === 'alibi' ? `${p.names[p.liar]} is lying. ${p.solution.order.map((person, i) => `${p.slots[i]}: ${p.names[person]}`).join(' · ')}${p.rotation ? ' · First badge: ' + p.objects[p.solution.offset] : ''}` : p.game === 'missingmove' ? p.solution.map(i => moveText(p.operations[i])).join(' → ') : p.game === 'tiletheory' ? 'The completed grid is shown below.' : p.game === 'wordfossil' ? p.mode === 'evolution' ? p.forms.join(' → ') : p.root.toUpperCase() : p.game === 'negativelogic' ? p.candidates.find(c => c.id === p.target).label : p.game === 'paradoxbox' ? p.choices[p.answer] : p.name;
+    parent.append(answerCard(answer, p.game === 'missingmove' ? 'One correct move sequence' : p.game === 'tiletheory' ? 'Correct grid' : 'Correct answer'));
     if (p.game === 'missingmove')
         parent.append(moveGrid(p.target, p.size, 'Solved target'));
     if (p.game === 'tiletheory') {
@@ -198,9 +204,7 @@ function render(focus) {
     tools.append(button('?', instructions, 'icon'), button('Stats', showStats, 'tool'), button('Settings', settings, 'tool'));
     tools.firstElementChild.setAttribute('aria-label', 'How to play');
     head.append(link('F. FOXHOLLOW LABS', '/', 'brand'), tools);
-    const nav = el('nav', '', 'game-switcher');
-    nav.setAttribute('aria-label', 'Game collection');
-    nav.append(link('All games ↗', '/games/'), select('Jump to another puzzle', Object.entries(catalog).map(([id, c]) => [id, c.name]), game, v => { location.href = `/${v}/`; }));
+    const nav = createGameNavigation(game);
     const hero = el('header', '', 'game-hero');
     hero.append(el('p', 'A FOXHOLLOW DAILY PUZZLE', 'eyebrow'), el('div', info.mark, 'game-mark'), el('h1', info.name), el('p', info.tagline, 'tagline'));
     app.append(head, nav, hero);

@@ -21,3 +21,5 @@ Word Weave now uses blank, numbered mini-crosswords with Across/Down clues and i
 The collection also includes eight new daily games: Lexicon Lock, The Alibi, The Missing Move, Tile Theory, Word Fossil, Negative Logic, Paradox Box and Line by Line. See [game documentation](games/EIGHT-GAMES.md) for mechanics, sources, actual content counts and validation. All daily games reset at midnight New York time.
 
 All thirteen games are now daily-only, with Normal/Hard in Settings, scores capped at 100 and unique light/dark colors. See [Daily-only update](games/DAILY-ONLY.md).
+
+WildGuess is playable at `/wildguess/`: one daily guess, exact/misplaced letter feedback, and earned-point letter hints. The web version uses browser-local progress and points, the app’s public daily word feed with a bundled fallback, and the bundled OEWN dictionary for guess validation. It has no purchases or iCloud sync. Its original scoring is preserved (including the full-word bonus); it is not capped at 100. Update `wildguess/words.json` from the public wildguess-words repository to extend offline coverage.

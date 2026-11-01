@@ -1,3 +1,5 @@
+import {createGameNavigation} from './navigation.js';
+import {resultCopy,answerCard} from './result-presentation.js';
 import {readHard,writeHard} from './daily-options.js';
 import {nextDailyReset} from './time.js';
 import { bank, validateBank } from './data.js';
@@ -170,8 +172,8 @@ function feedback(s:Session){
  openModal('Keep a puzzle note.',[label('What felt off?',reason),text,$('p','This note is saved only in this browser. It is not sent to Foxhollow Labs. You can copy it to share separately.','muted'),button('Save note on this device',()=>{data.feedback.push({puzzleId:s.puzzle.id,reason:reason.value+(text.value?': '+text.value:''),created:new Date().toISOString()});persist();dialog.close();notify('Note saved on this device.');},'primary')]);
 }
 function renderResult(s:Session,board:HTMLElement){
- const won=s.phase==='solved',h=$('h2',won?'Correct! You solved it.':'Today’s answer.','result-title');h.tabIndex=-1;h.id='result-heading';
- const top=$('div','','result-top');top.append($('span',won?'◆ SOLVED':'◇ REVEALED','eyebrow'),$('strong',`${s.score} pts`,'result-score'));board.append(top,h);
+ const won=s.phase==='solved',copy=resultCopy(won?'solved':s.guesses.length>=s.maxMistakes?'failed':'revealed'),h=$('h2',copy.heading,'result-title');h.tabIndex=-1;h.id='result-heading';
+ const top=$('div','','result-top');top.append($('span',won?'◆ SOLVED':'◇ REVEALED','eyebrow'),$('strong',`${s.score} pts`,'result-score'));board.append(top,h,$('p',copy.message,'result-message'),answerCard(s.puzzle.answer));
  const details=$('details','','solution-details');details.append($('summary','How it works'));board.append(details);
  if(s.puzzle.game==='fourthword'){
   const row=$('div','','solution-row');for(const value of [...s.puzzle.clues,s.puzzle.answer])row.append($('span',value,value===s.puzzle.answer?'solution-answer':''));details.append(row);
@@ -191,7 +193,7 @@ function render(){
  const content=document.createDocumentFragment();
  const top=$('div','','masthead');top.append(link('F.  FOXHOLLOW LABS','/','brand'));
  const tools=$('div','','toolbar');tools.append(button('?',instructions,'icon'),button('Stats',showStats,'tool'),button('Settings',settings,'tool'));tools.children[0]!.setAttribute('aria-label','How to play');top.append(tools);content.append(top);
- const switcher=$('nav','','game-switcher');switcher.setAttribute('aria-label','Games');switcher.append(link('All games','/games/'),link('WordBridge','/wordbridge/'),link('The Fourth Thing','/fourthword/',fourth?'active':''),link('The Odd Rule','/oddrule/',fourth?'':'active'),link('Semantic Gravity','/semanticgravity/'),link('Word Weave','/wordweave/'));content.append(switcher);
+ content.append(createGameNavigation(game));
  const hero=$('header','','game-hero'),mark=$('div',fourth?'✦':'∴','game-mark');mark.setAttribute('aria-hidden','true');
  hero.append($('p','A FOXHOLLOW DAILY PUZZLE','eyebrow'),mark,$('h1',title),$('p',fourth?'Three belong together. What’s the fourth?':'Find the rule. Break the pattern.','tagline'));content.append(hero);
  const board=$('section','','board');board.setAttribute('aria-label','Puzzle');

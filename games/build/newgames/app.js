@@ -1,3 +1,5 @@
+import { createGameNavigation } from '../navigation.js';
+import { resultCopy, answerCard } from '../result-presentation.js';
 import { readHard, writeHard } from '../daily-options.js';
 import { nextDailyReset } from '../time.js';
 import { hash } from '../data.js';
@@ -389,12 +391,20 @@ async function weaveHint(type) {
     }
 }
 function resultView(state, board) {
-    const heading = el('h2', state.phase === 'solved' ? 'Correct! You solved it.' : 'Today’s answer.', 'result-title');
+    const exhausted = state.game === 'wordweave' ? state.mistakes >= (state.hard ? 3 : 8) : state.limit !== null && state.guesses.length >= state.limit;
+    const copy = resultCopy(state.phase === 'solved' ? 'solved' : exhausted ? 'failed' : 'revealed');
+    const heading = el('h2', copy.heading, 'result-title');
     heading.id = 'result-heading';
     heading.tabIndex = -1;
     const top = el('div', '', 'result-top');
     top.append(el('span', state.phase === 'solved' ? '◆ SOLVED' : '◇ REVEALED', 'eyebrow'), el('strong', `${state.score} pts`, 'result-score'));
-    board.append(top, heading);
+    board.append(top, heading, el('p', copy.message, 'result-message'));
+    if (state.game === 'semanticgravity')
+        board.append(answerCard(gravityTargets.find(p => p.id === state.puzzleId).word.toUpperCase()));
+    else {
+        board.append(el('h3', 'Correct grid', 'answer-label'));
+        weaveView({ ...state, letters: state.puzzle.solution, notes: {} }, board);
+    }
     const minutes = Math.floor(((state.finished || Date.now()) - state.started) / 60000), seconds = Math.max(0, Math.floor(((state.finished || Date.now()) - state.started) / 1000) % 60), stats = statistics(save);
     board.append(el('p', `${levels[state.level - 1]} · ${minutes}m ${seconds}s · ${state.hints} hints · ${state.game === 'wordweave' ? state.mistakes + ' incorrect submissions' : state.guesses.length + ' guesses'} · Daily streak ${stats.streak}`, 'muted'));
     const details = el('details', '', 'solution-details');
@@ -404,7 +414,6 @@ function resultView(state, board) {
         gravityView(state, details);
     else {
         const displayed = state.phase === 'failed' ? { ...state, letters: state.puzzle.solution } : state;
-        weaveView(displayed, details);
         const formed = slots(state.puzzle.layout, ...dimensions(state.puzzle)).map(slot => slot.cells.map(i => displayed.letters[i]).join(''));
         details.append(el('p', `${formed.length} words formed. Longest: ${formed.reduce((a, b) => b.length > a.length ? b : a, '').toUpperCase()}. ${state.phase === 'failed' ? 'The displayed grid is an example valid completion.' : ''}`));
     }
@@ -420,12 +429,7 @@ function render() {
     tools.children[0].setAttribute('aria-label', 'How to play');
     top.append(tools);
     fragment.append(top);
-    const nav = el('nav', '', 'game-switcher');
-    nav.setAttribute('aria-label', 'Game collection');
-    nav.append(link('All games', '/games/'), link('WordBridge', '/wordbridge/'), link('The Fourth Thing', '/fourthword/'), link('The Odd Rule', '/oddrule/'));
-    for (const g of ['semanticgravity', 'wordweave'])
-        nav.append(link(names[g], `/${g}/`, g === game ? 'active' : ''));
-    fragment.append(nav);
+    fragment.append(createGameNavigation(game));
     const header = el('header', '', 'game-hero'), mark = el('div', game === 'semanticgravity' ? '✺' : '▦', 'game-mark');
     mark.setAttribute('aria-hidden', 'true');
     header.append(el('p', 'A FOXHOLLOW DAILY PUZZLE', 'eyebrow'), mark, el('h1', names[game]), el('p', game === 'semanticgravity' ? 'Every guess pulls you closer.' : 'Every letter changes everything.', 'tagline'));
@@ -446,7 +450,7 @@ function render() {
             gravityView(s, board);
         else
             weaveView(s, board);
-        const feedback = el('p', busy ? 'Solver is checking the constraints…' : message, 'feedback');
+        const feedback = el('p', s.phase !== 'playing' ? '' : busy ? 'Solver is checking the constraints…' : message, 'feedback');
         feedback.setAttribute('role', 'status');
         feedback.setAttribute('aria-live', 'polite');
         board.append(feedback);
